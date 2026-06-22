@@ -1,0 +1,21 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+*.log
+
+# ไม่จำเป็น
+.editorconfig
+.gitattributes
+.oxlintrc.json
+.prettierrc.json
+eslint.config.js
+jsconfig.json
+package-lock.json
+README.md
+
+# สำคัญมาก ห้ามขึ้น!
+.env
+.env.local
+.env.production

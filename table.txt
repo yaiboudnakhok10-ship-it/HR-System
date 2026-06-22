@@ -1,0 +1,971 @@
+-- ============================================
+-- 1. ตาราง เบิกทรัพย์สินบริษัท
+-- ============================================
+CREATE TABLE asset_requests (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title         TEXT NOT NULL,
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  created_by    INT8 REFERENCES system_users(id)  -- อ้างอิง system_users
+);
+
+-- ============================================
+-- 2. ตาราง เบิกสวัสดิการ
+-- ============================================
+CREATE TABLE welfare_requests (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title         TEXT NOT NULL,
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  created_by    INT8 REFERENCES system_users(id)  -- อ้างอิง system_users
+);
+
+-- ============================================
+-- 3. ตาราง ลายชื่อพนักงาน
+-- ============================================
+CREATE TABLE employee (
+  id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  full_name       TEXT NOT NULL,
+  signature_image TEXT,
+  position        TEXT NOT NULL,
+  created_at      TIMESTAMPTZ DEFAULT now(),
+  created_by      INT8 REFERENCES system_users(id)  -- อ้างอิง system_users
+);
+
+-- ============================================
+-- 4. ตาราง รายชื่อหัวหน้า
+-- ============================================
+CREATE TABLE supervisors (
+  id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  full_name       TEXT NOT NULL,
+  signature_image TEXT,
+  position        TEXT NOT NULL,
+  created_at      TIMESTAMPTZ DEFAULT now(),
+  created_by      INT8 REFERENCES system_users(id)  -- อ้างอิง system_users
+);
+
+
+
+
+
+CREATE TABLE walkie_asset_requests (
+  id                  UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  employee_code       TEXT,                          -- รหัสไทยดิว
+  title               TEXT,                          -- คำนำหน้า
+  first_name          TEXT,                          -- ชื่อ
+  last_name           TEXT,                          -- นามสกุล
+  position            TEXT,                          -- ตำแหน่ง
+  department          TEXT,                          -- แผนก
+  project             TEXT,                          -- โครงการ
+  company             TEXT,                          -- บริษัท
+  work_age            TEXT,                          -- อายุงาน
+  phone               TEXT,                          -- เบอร์โทร
+  image_url           TEXT,                          -- รูปภาพ (URL)
+  request_type        TEXT,                          -- หัวข้อการขอเบิก
+  request_item        TEXT,                          -- รายการขอเบิก
+  remark              TEXT,                          -- หมายเหตุ
+  asset_no            TEXT,                          -- ASSET Number
+  serial_no           TEXT,                          -- Serial Number
+  detail              TEXT,                          -- รายละเอียด
+  component           TEXT,                          -- ส่วนประกอบ
+  item_date           TEXT,                          -- วันที่
+  amount              NUMERIC DEFAULT 0,             -- จำนวนเงิน
+  signature1_url      TEXT,                          -- รูปลายเซ็น 1 (URL)
+  signature2_url      TEXT,                          -- รูปลายเซ็น 2 (URL)
+  signer1_name        TEXT,                          -- ชื่อคนที่เซ็น 1
+  signer2_name        TEXT,                          -- ชื่อคนที่เซ็น 2
+  created_at          TIMESTAMPTZ DEFAULT now(),     -- วันที่บันทึก
+  created_by          INT8 REFERENCES system_users(id)
+);
+
+
+CREATE TABLE walkie_welfare_requests (
+  id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  employee_code     TEXT,           -- รหัสไทยดิว
+  title             TEXT,           -- คำนำหน้า
+  first_name        TEXT,           -- ชื่อ
+  last_name         TEXT,           -- นามสกุล
+  position          TEXT,           -- ตำแหน่ง
+  department        TEXT,           -- แผนก
+  project           TEXT,           -- โครงการ
+  company           TEXT,           -- บริษัท
+  work_age          TEXT,           -- อายุงาน
+  phone             TEXT,           -- เบอร์โทร
+  image_url         TEXT,           -- รูปภาพ (URL)
+  welfare_type      TEXT,           -- หัวข้อสวัสดิการ
+  welfare_item      TEXT,           -- รายการสวัสดิการ
+  remark            TEXT,           -- หมายเหตุ
+  item_date         TEXT,           -- วันที่
+  amount            NUMERIC DEFAULT 0, -- จำนวนเงิน
+  signature1_url    TEXT,           -- รูปลายเซ็น 1 (URL)
+  signature2_url    TEXT,           -- รูปลายเซ็น 2 (URL)
+  signer1_name      TEXT,           -- ชื่อคนที่เซ็น 1
+  signer2_name      TEXT,           -- ชื่อคนที่เซ็น 2
+  created_at        TIMESTAMPTZ DEFAULT now(), -- วันที่บันทึก
+  created_by        INT8 REFERENCES system_users(id)
+);
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ข้อมูลเบิกสวัสดิการ - Sawadeekan</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@100..900&family=Prompt:wght@100;300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Phetsarath&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Noto Sans Thai', 'Prompt', sans-serif; }
+        body { background: #f8f9fa; margin: 0; padding: 20px; }
+        ._SDS_main-wrapper { background: white; border-radius: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 2rem; max-width: 100%; margin: 0 auto; }
+        ._SDS_top-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+        ._SDS_page-heading { font-size: 1.5rem; font-weight: bold; color: #000; display: flex; align-items: center; }
+        ._SDS_page-heading i { margin-right: 0.5rem; }
+        ._SDS_action-button { padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; cursor: pointer; border: 2px solid; font-family: inherit; margin-left: 0.75rem; background: white; }
+        ._SDS_action-button i { margin-right: 0.5rem; }
+        ._SDS_sync-button { border-color: #06b6d4 !important; color: #06b6d4 !important; }
+        ._SDS_sync-button:hover { background: #06b6d4 !important; color: white !important; }
+        ._SDS_export-select { border: 2px solid #8b5cf6; color: #8b5cf6; background: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-size: 1rem; cursor: pointer; font-family: inherit; transition: all 0.3s; }
+        ._SDS_export-select:hover { background: #8b5cf6; color: white; }
+        ._SDS_filter-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; }
+        ._SDS_filter-field { font-family: inherit; flex: 1; min-width: 200px; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; background: white; color: #000; }
+        ._SDS_filter-field:focus { outline: none; border-color: #000; }
+        ._SDS_date-label { font-size: 0.9rem; font-weight: 600; color: #374151; white-space: nowrap; }
+        ._SDS_date-input { font-family: inherit; padding: 0.72rem 0.75rem; border: 2px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; background: white; color: #000; cursor: pointer; }
+        ._SDS_date-input:focus { outline: none; border-color: #000; }
+        ._SDS_search-btn { padding: 0.75rem 1.25rem; border-radius: 0.5rem; border: 2px solid #10b981; color: #10b981; background: white; font-size: 1rem; cursor: pointer; font-family: inherit; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+        ._SDS_search-btn:hover { background: #10b981; color: white; }
+        ._SDS_today-btn { padding: 0.75rem 1.25rem; border-radius: 0.5rem; border: 2px solid #f59e0b; color: #f59e0b; background: white; font-size: 1rem; cursor: pointer; font-family: inherit; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+        ._SDS_today-btn:hover { background: #f59e0b; color: white; }
+        ._SDS_clear-btn { padding: 0.75rem 1.25rem; border-radius: 0.5rem; border: 2px solid #ef4444; color: #ef4444; background: white; font-size: 1rem; cursor: pointer; font-family: inherit; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+        ._SDS_clear-btn:hover { background: #ef4444; color: white; }
+        ._SDS_scrollable-area { overflow-x: auto; max-height: 70vh; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 0.5rem; }
+        ._SDS_data-table { border-collapse: collapse; width: 100%; min-width: 1200px; }
+        ._SDS_data-table th, ._SDS_data-table td { padding: 0.85rem 1rem; text-align: center; vertical-align: middle; border: 1px solid #d1d5db; white-space: nowrap; background: white; }
+        ._SDS_data-table thead { position: sticky; top: 0; z-index: 10; }
+        ._SDS_data-table th { font-weight: bold; color: #000; background: #f3f4f6; border-bottom: 2px solid #000; }
+        ._SDS_record-counter { margin-bottom: 0.5rem; color: #000; font-size: 0.9rem; font-weight: 500; }
+        ._SDS_info-text { padding: 1rem; text-align: center; color: #6b7280; font-style: italic; }
+        ._SDS_image-preview { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 1px solid #ddd; transition: transform 0.2s; }
+        ._SDS_image-preview:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        ._SDS_doc-btn { padding: 0.4rem 0.75rem; border-radius: 0.375rem; border: 2px solid #3b82f6; color: #3b82f6; background: white; font-size: 0.85rem; cursor: pointer; font-family: inherit; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; text-decoration: none; }
+        ._SDS_doc-btn:hover { background: #3b82f6; color: white; }
+        ._SDS_print-btn { padding: 0.4rem 0.75rem; border-radius: 0.375rem; border: 2px solid #dc2626; color: #dc2626; background: white; font-size: 0.85rem; cursor: pointer; font-family: inherit; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; margin-top: 0.3rem; }
+        ._SDS_print-btn:hover { background: #dc2626; color: white; }
+        ._SDS_items-list { max-width: 300px; white-space: normal; word-wrap: break-word; text-align: left; font-size: 0.9rem; line-height: 1.4; }
+        ._SDS_items-list ul { margin: 0; padding-left: 1.2rem; }
+        ._SDS_items-list li { margin-bottom: 0.25rem; }
+        ._SDS_modal { display: none; position: fixed; z-index: 9999; padding-top: 50px; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
+        ._SDS_modal-content { margin: auto; display: block; max-width: 90%; max-height: 90%; }
+        ._SDS_modal-close { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+        ._SDS_alert-box { position: fixed; right: 20px; top: 80px; background: white; color: #000; padding: 1rem 2rem; border-radius: 0.5rem; border: 2px solid #9379C2; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 9998; animation: _SDS_slideIn 0.3s ease-out; }
+        @keyframes _SDS_slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        ._SDS_pdf-hidden-container { position: fixed; left: -9999px; top: 0; width: 794px; background: white; z-index: -999; }
+
+        /* PDF STYLES */
+        .a4-sheet { width: 210mm; min-height: 297mm; background: white; padding: 12mm 15mm 16mm 15mm; font-family: 'Sarabun', 'Noto Sans Thai', sans-serif; font-size: 9.5pt; line-height: 1.5; color: #1a1a1a; position: relative; }
+        .lao-text { font-family: 'Phetsarath', 'Noto Sans Lao', sans-serif !important; line-height: 1.8; }
+        .doc-header { display: flex; align-items: center; margin-bottom: 10px; }
+        .doc-logo { background: white; padding: 5px 8px; border-radius: 4px; flex-shrink: 0; width: 110px; display: flex; align-items: center; justify-content: center; }
+        .doc-logo img { height: 48px; width: auto; object-fit: contain; display: block; }
+        .doc-title-center { flex: 1; text-align: center; font-size: 14pt; font-weight: 800; color: #1a1a1a; font-family: 'Sarabun', 'Noto Sans Thai', sans-serif; }
+        .doc-header-spacer { width: 110px; flex-shrink: 0; }
+        .sec-box { border: 1.5px solid #444; margin-bottom: 8px; }
+        .sec-title { background: #b8b8b8; text-align: center; font-weight: 700; font-size: 10pt; padding: 4px 10px; border-bottom: 1.5px solid #444; color: #1a1a1a; }
+        .sec-body { padding: 6px 14px; }
+        .info-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+        .info-left { padding-right: 12px; border-right: 1px solid #ccc; }
+        .info-right { padding-left: 12px; }
+        .info-row { display: grid; grid-template-columns: 105px 1fr; align-items: baseline; padding: 3.5px 0; gap: 2px; }
+        .info-lbl { font-weight: 700; color: #111; font-size: 8.8pt; white-space: nowrap; }
+        .info-val { font-size: 8.8pt; color: #1a1a1a; min-height: 15px; word-break: break-word; }
+        .info-row-full { display: grid; grid-template-columns: 160px 1fr; align-items: baseline; padding: 3.5px 0; gap: 2px; }
+        .info-lbl-lg { font-weight: 700; color: #111; font-size: 8.8pt; white-space: nowrap; }
+        .info-val-full { font-size: 8.8pt; color: #1a1a1a; min-height: 15px; }
+        .info-val-tall { min-height: 28px; white-space: pre-wrap; }
+        .sig-emp-section { margin-top: 14px; display: flex; flex-direction: column; align-items: center; margin-left: auto; width: 50%; padding-right: 10mm; }
+        .sig-emp-dots { font-size: 9.5pt; letter-spacing: 2px; color: #000; margin-top: 22px; text-align: center; }
+        .sig-emp-name { font-size: 8.8pt; color: #222; text-align: center; margin-top: 3px; }
+        .sig-emp-date { font-size: 9pt; margin-top: 6px; display: flex; align-items: center; gap: 6px; align-self: flex-start; }
+        .sig-bottom-wrap { display: grid; grid-template-columns: 1fr 1fr; margin-top: 20px; padding-left: 10%; padding-right: 2%; gap: 0; }
+        .sig-col { display: flex; flex-direction: column; align-items: flex-start; padding: 0 8px; }
+        .sig-col-label { font-size: 9pt; font-weight: 600; margin-bottom: 0; }
+        .sig-col-img-wrap { height: 90px; width: 220px; display: flex; align-items: center; justify-content: flex-start; margin-top: 6px; margin-left: 28px; overflow: hidden; }
+        .sig-col-img { max-height: 88px; max-width: 218px; width: auto; height: auto; object-fit: contain; display: block; }
+        .sig-col-dots { font-size: 9.5pt; letter-spacing: 1.5px; color: #444; margin-top: 60px; margin-left: 28px; }
+        .sig-col-name { font-size: 8.5pt; color: #222; margin-top: 3px; margin-left: 28px; }
+        .sig-col-date { font-size: 8.5pt; margin-top: 4px; display: flex; align-items: center; gap: 4px; margin-left: 28px; }
+        .sig-col-role { font-size: 7.8pt; color: #444; margin-top: 3px; line-height: 1.45; margin-left: 28px; }
+        .doc-timestamp { position: absolute; bottom: 10mm; right: 15mm; font-size: 7.5pt; color: #666; }
+        .p2-cond-title { background: #b8b8b8; text-align: center; font-weight: 700; font-size: 10pt; padding: 4px 10px; border: 1.5px solid #444; border-bottom: none; color: #1a1a1a; }
+        .p2-cond-box { border: 1.5px solid #444; padding: 8px 14px; margin-bottom: 10px; font-size: 8pt; line-height: 1.75; color: #1a1a1a; font-family: 'Phetsarath', 'Noto Sans Lao', sans-serif; }
+
+        /* ✅ แก้ไข: รูปภาพใหญ่ขึ้น เต็มหน้า */
+        .p2-photo-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            width: 100%;
+            border: 1.5px solid #444;
+            padding: 6px;
+            background: white;
+            min-height: 380px;
+            max-height: 460px;
+            overflow: hidden;
+        }
+        .p2-photo-wrap img {
+            width: 100%;
+            height: auto;
+            max-height: 448px;
+            object-fit: contain;
+            display: block;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+
+        .p2-sig-wrap { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+        .p2-sig-label { font-size: 9.5pt; font-weight: 600; }
+        .p2-sig-dots { font-size: 9.5pt; letter-spacing: 2px; color: #000; margin-top: 22px; }
+        .p2-sig-name { font-size: 8.8pt; color: #222; margin-top: 3px; text-align: center; }
+        .p2-sig-date { font-size: 9pt; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+
+        /* ✅ Page 2: layout ให้รูปขยายเต็มพื้นที่ */
+        .a4-sheet-p2 {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            padding: 10mm 12mm 12mm 12mm;
+            font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+            font-size: 9.5pt;
+            line-height: 1.5;
+            color: #1a1a1a;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+
+<div id="_SDS_imageModal" class="_SDS_modal" onclick="this.style.display='none'">
+    <span class="_SDS_modal-close">&times;</span>
+    <img class="_SDS_modal-content" id="_SDS_modalImage">
+</div>
+
+<div id="_SDS_pdfHiddenWrap" class="_SDS_pdf-hidden-container">
+    <div id="_SDS_pdfPageWrap"></div>
+</div>
+
+<div class="_SDS_main-wrapper">
+    <div class="_SDS_top-section">
+        <h2 class="_SDS_page-heading">
+            <i class="fas fa-clipboard-list"></i>&nbsp;ข้อมูลเบิกสวัสดิการ
+        </h2>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="_WQI_action-button _WQI_add-button" id="_WQI_addBtn" onclick="openPage('from_sawadee', this); return false;" style="border: 2px solid green; color: green; background-color: white;">
+    <i class="fas fa-plus" style="color: green;"></i> เพิ่มข้อมูล
+</button>
+            <select class="_SDS_export-select" onchange="_SDS_handleExport(this)">
+                <option value="">เลือกรูปแบบการส่งออก</option>
+                <option value="excel">ส่งออกเป็น Excel</option>
+            </select>
+            <button class="_SDS_action-button _SDS_sync-button" id="_SDS_syncBtn" onclick="_SDS_reloadData()">
+                <i class="fas fa-sync-alt"></i>&nbsp;รีเฟรช
+            </button>
+            <div style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.75rem 1rem;border:2px solid #d1d5db;border-radius:0.5rem;font-size:0.85rem;color:#6b7280;background:white;font-family:inherit;">
+                <span id="_SDS_liveDot" style="color:#10b981;font-size:1rem;transition:opacity 0.3s;">●</span> Live
+            </div>
+        </div>
+    </div>
+
+    <div class="_SDS_filter-row">
+        <input type="text" id="_SDS_filterInput" class="_SDS_filter-field"
+               placeholder="ค้นหา... (รหัสพนักงาน, ชื่อ-นามสกุล, หัวข้อการขอเบิก, รายการ)"
+               oninput="_SDS_applyFilter()">
+    </div>
+
+    <div class="_SDS_filter-row">
+        <span class="_SDS_date-label"><i class="fas fa-calendar-alt"></i>&nbsp;ค้นหาวันที่:</span>
+        <span class="_SDS_date-label">จาก</span>
+        <input type="date" id="_SDS_dateFrom" class="_SDS_date-input" onchange="_SDS_applyFilter()">
+        <span class="_SDS_date-label">ถึง</span>
+        <input type="date" id="_SDS_dateTo" class="_SDS_date-input" onchange="_SDS_applyFilter()">
+        <button class="_SDS_today-btn" onclick="_SDS_filterToday()"><i class="fas fa-calendar-day"></i>&nbsp;วันนี้</button>
+        <button class="_SDS_search-btn" onclick="_SDS_applyFilter()"><i class="fas fa-search"></i>&nbsp;ค้นหา</button>
+        <button class="_SDS_clear-btn" onclick="_SDS_clearFilter()"><i class="fas fa-times"></i>&nbsp;ล้างค่า</button>
+    </div>
+
+    <div class="_SDS_record-counter" id="_SDS_recordCount"></div>
+
+    <div class="_SDS_scrollable-area">
+        <table class="_SDS_data-table">
+            <thead>
+                <tr>
+                    <th>ลำดับ</th>
+                    <th>รูปภาพ</th>
+                    <th>หัวข้อการขอเบิก</th>
+                    <th>รายการขอเบิก</th>
+                    <th>ชื่อ-นามสกุล (คนเบิก)</th>
+                    <th>วันที่</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="_SDS_tableBody">
+                <tr><td colspan="7" class="_SDS_info-text">กำลังโหลดข้อมูล...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+var _SDS_LOGO_URL   = "https://dkbgdrnwixbukchansmz.supabase.co/storage/v1/object/public/imgwal/img_L2509021_0_1772065500425.jpg";
+var _SDS_allData    = [];
+var _SDS_autoTimer  = null;
+var _SDS_lastHash   = '';
+var _SDS_isFetching = false;
+var _SDS_liveStarted = false;
+var _SDS_supervisorMap = {}; 
+
+function _SDS_parseDateStr(s) {
+    if (!s) return null;
+    s = String(s).trim();
+    if (s.indexOf('/') !== -1) {
+        var p = s.split('/');
+        if (p.length === 3) return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+    } else if (s.indexOf('-') !== -1) {
+        var d = new Date(s);
+        if (!isNaN(d)) return d;
+    }
+    return null;
+}
+
+function _SDS_getTodayISO() {
+    var n = new Date();
+    return n.getFullYear() + '-' +
+           String(n.getMonth() + 1).padStart(2, '0') + '-' +
+           String(n.getDate()).padStart(2, '0');
+}
+
+function _SDS_fmtTimestamp() {
+    var n = new Date();
+    return String(n.getDate()).padStart(2,'0') + '-' +
+           String(n.getMonth()+1).padStart(2,'0') + '-' +
+           n.getFullYear() + ', ' +
+           String(n.getHours()).padStart(2,'0') + ':' +
+           String(n.getMinutes()).padStart(2,'0');
+}
+
+function _SDS_mapRow(row) {
+    if (!Array.isArray(row)) return null;
+    var _SDS_employee_id = String(row[0]  || '').trim();
+    if (!_SDS_employee_id) return null;
+    var _SDS_title     = String(row[1]  || '').trim();
+    var _SDS_firstName = String(row[2]  || '').trim();
+    var _SDS_lastName  = String(row[3]  || '').trim();
+    var _SDS_fullName  = (_SDS_title + ' ' + _SDS_firstName + ' ' + _SDS_lastName).trim() || '-';
+    return {
+        employee_id: _SDS_employee_id,
+        full_name:   _SDS_fullName,
+        position:    String(row[4]  || '').trim(),
+        department:  String(row[5]  || '').trim(),
+        project:     String(row[6]  || '').trim(),
+        company:     String(row[7]  || '').trim(),
+        tenure:      String(row[8]  || '').trim(),
+        phone:       String(row[9]  || '').trim(),
+        image_url:   String(row[10] || '').trim(),
+        topic:       String(row[11] || '').trim(),
+        items:       String(row[12] || '').trim(),
+        remark:      String(row[13] || '').trim(),
+        date:        String(row[14] || '').trim(),
+        amount:      String(row[15] || '').trim(),
+        sig1_url:    String(row[16] || '').trim(),
+        sig2_url:    String(row[17] || '').trim(),
+        sig1_name: String(row[18] || '').trim(),  // S (index 18)
+        sig2_name: String(row[19] || '').trim(),  // T (index 19)
+        doc_url:     String(row[20] || '').trim()
+    };
+}
+
+function _SDS_sortByDate(arr) {
+    arr.sort(function(a, b) {
+        var da = _SDS_parseDateStr(a.date);
+        var db = _SDS_parseDateStr(b.date);
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return db - da;
+    });
+}
+
+function _SDS_hashData(data) {
+    var parts = [];
+    for (var i = 0; i < data.length; i++) {
+        parts.push(data[i].employee_id + '|' + data[i].date + '|' + data[i].topic);
+    }
+    return parts.join('##');
+}
+
+function _SDS_reloadData() {
+    var btn = document.getElementById('_SDS_syncBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>&nbsp;กำลังโหลด...';
+    }
+    _SDS_allData = [];
+    document.getElementById('_SDS_tableBody').innerHTML =
+        '<tr><td colspan="7" class="_SDS_info-text">กำลังโหลดข้อมูล...</td></tr>';
+    _SDS_fetchData();
+}
+
+function _SDS_fetchData() {
+    var btn = document.getElementById('_SDS_syncBtn');
+
+    function loadMainData() {
+        google.script.run
+            .withSuccessHandler(function(raw) {
+                var formatted = [];
+                if (Array.isArray(raw)) {
+                    for (var i = 0; i < raw.length; i++) {
+                        var r = _SDS_mapRow(raw[i]);
+                        if (r) formatted.push(r);
+                    }
+                }
+                _SDS_sortByDate(formatted);
+                _SDS_allData  = formatted;
+                _SDS_lastHash = _SDS_hashData(_SDS_allData);
+                _SDS_renderRows(_SDS_allData);
+                _SDS_updateCounter(_SDS_allData.length, _SDS_allData.length);
+                _SDS_showAlert('✓ โหลดข้อมูลเรียบร้อย (' + formatted.length + ' รายการ)');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i>&nbsp;รีเฟรช';
+                }
+                if (!_SDS_liveStarted) {
+                    _SDS_liveStarted = true;
+                    _SDS_startLive();
+                }
+            })
+            .withFailureHandler(function() {
+                var sample = _SDS_sampleData();
+                _SDS_allData  = sample;
+                _SDS_lastHash = _SDS_hashData(_SDS_allData);
+                _SDS_renderRows(_SDS_allData);
+                _SDS_updateCounter(_SDS_allData.length, _SDS_allData.length);
+                _SDS_showAlert('⚠️ โหลดข้อมูลไม่สำเร็จ ใช้ข้อมูลตัวอย่าง');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i>&nbsp;รีเฟรช';
+                }
+            })
+            .getScanOutData_sawadeekan();
+    }
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+
+        // ✅ โหลด supervisor map ก่อน แล้วค่อยโหลดข้อมูลหลัก
+        google.script.run
+            .withSuccessHandler(function(supervisors) {
+                _SDS_supervisorMap = {};
+                (supervisors || []).forEach(function(s) {
+                    if (s.full_name) {
+                        _SDS_supervisorMap[s.full_name] = s.position;
+                    }
+                });
+                loadMainData();
+            })
+            .withFailureHandler(function() {
+                // โหลด supervisor ล้มเหลว แต่ยังโหลดข้อมูลหลักได้
+                _SDS_showAlert('⚠️ โหลดตำแหน่งหัวหน้าไม่ได้');
+                loadMainData();
+            })
+            .getSupervisorPositions();
+
+    } else {
+        // โหมดทดสอบ (ไม่มี google.script)
+        var sample = _SDS_sampleData();
+        _SDS_allData  = sample;
+        _SDS_lastHash = _SDS_hashData(_SDS_allData);
+        _SDS_renderRows(_SDS_allData);
+        _SDS_updateCounter(_SDS_allData.length, _SDS_allData.length);
+        _SDS_showAlert('✓ ใช้ข้อมูลตัวอย่าง (โหมดทดสอบ)');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i>&nbsp;รีเฟรช';
+        }
+    }
+}
+
+function _SDS_sampleData() {
+    return [
+        {
+            employee_id: 'L2507048',
+            full_name:   'นาย สมจิด จันทะจอน',
+            image_url:   'https://via.placeholder.com/400x300/333/fff?text=Photo',
+            topic:       'วิทยุสื่อสาร',
+            items:       'วิทยุสื่อสาร พร้อมอุปกรณ์ครบชุด',
+            date:        '16-02-2026',
+            position:    'พนักงานปฏิบัติการ',
+            department:  'Operation',
+            project:     'เซโปน',
+            company:     'THAIDRILL LAO SOLE',
+            tenure:      '0 ปี 7 เดือน 4 วัน',
+            phone:       '020 29769768',
+            remark:      '',
+            amount:      '$0.00',
+            sig1_url:    '',
+            sig2_url:    '',
+            sig1_name:   'นางแอนนี ດວງພະຈັນ',
+            sig2_name:   'นายธนพร ຈ້ຽຍສຸຂະ',
+            doc_url:     ''
+        }
+    ];
+}
+
+function _SDS_updateCounter(shown, total) {
+    var el = document.getElementById('_SDS_recordCount');
+    if (el) el.textContent = 'แสดง ' + shown + ' จาก ' + total + ' รายการ';
+}
+
+function _SDS_formatItems(items) {
+    if (!items || items === '-') return '-';
+    var list = items.split('\n');
+    var filtered = [];
+    for (var i = 0; i < list.length; i++) {
+        if (list[i].trim() !== '') filtered.push(list[i].trim());
+    }
+    if (filtered.length === 0) return items;
+    var html = '<div class="_SDS_items-list"><ul>';
+    for (var j = 0; j < filtered.length; j++) {
+        html += '<li>' + filtered[j] + '</li>';
+    }
+    html += '</ul></div>';
+    return html;
+}
+
+function _SDS_openImageModal(src) {
+    document.getElementById('_SDS_modalImage').src = src;
+    document.getElementById('_SDS_imageModal').style.display = 'block';
+}
+
+function _SDS_renderRows(rows) {
+    var tbody = document.getElementById('_SDS_tableBody');
+    tbody.innerHTML = '';
+
+    if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="_SDS_info-text">ไม่พบข้อมูลที่ค้นหา</td></tr>';
+        _SDS_updateCounter(0, _SDS_allData.length);
+        return;
+    }
+
+    for (var i = 0; i < rows.length; i++) {
+        (function(item, idx) {
+            var tr = document.createElement('tr');
+
+            var tdNo = document.createElement('td');
+            tdNo.textContent = idx + 1;
+            tr.appendChild(tdNo);
+
+            var tdImg = document.createElement('td');
+            if (item.image_url && item.image_url.indexOf('http') === 0) {
+                var img = document.createElement('img');
+                img.src = item.image_url;
+                img.className = '_SDS_image-preview';
+                img.onclick = (function(u) { return function() { _SDS_openImageModal(u); }; })(item.image_url);
+                img.onerror = function() { this.src = 'https://via.placeholder.com/50?text=X'; };
+                tdImg.appendChild(img);
+            } else {
+                tdImg.innerHTML = '<span style="color:#999;font-size:0.8rem;">ไม่มีรูป</span>';
+            }
+            tr.appendChild(tdImg);
+
+            var tdTopic = document.createElement('td');
+            tdTopic.textContent = item.topic || '-';
+            tdTopic.style.textAlign = 'left';
+            tr.appendChild(tdTopic);
+
+            var tdItems = document.createElement('td');
+            tdItems.innerHTML = _SDS_formatItems(item.items || '-');
+            tdItems.style.textAlign = 'left';
+            tr.appendChild(tdItems);
+
+            var tdName = document.createElement('td');
+            tdName.style.textAlign = 'left';
+            tdName.style.whiteSpace = 'normal';
+            tdName.textContent = (item.full_name || '-') + (item.employee_id ? ' / ' + item.employee_id : '');
+            tr.appendChild(tdName);
+
+            var tdDate = document.createElement('td');
+            tdDate.textContent = item.date || '-';
+            tr.appendChild(tdDate);
+
+            var tdAct = document.createElement('td');
+            tdAct.style.whiteSpace = 'nowrap';
+
+            if (item.doc_url && item.doc_url.indexOf('http') === 0) {
+                var aBtn = document.createElement('a');
+                aBtn.href = item.doc_url;
+                aBtn.target = '_blank';
+                aBtn.className = '_SDS_doc-btn';
+                aBtn.innerHTML = '<i class="fas fa-link"></i>&nbsp;ดูเอกสาร';
+                tdAct.appendChild(aBtn);
+                tdAct.appendChild(document.createElement('br'));
+            }
+
+            var pBtn = document.createElement('button');
+            pBtn.className = '_SDS_print-btn';
+            pBtn.innerHTML = '<i class="fas fa-file-pdf"></i>&nbsp;พิมพ์เอกสาร';
+            pBtn.onclick = (function(it) { return function() { _SDS_generatePDF(it); }; })(item);
+            tdAct.appendChild(pBtn);
+
+            tr.appendChild(tdAct);
+            tbody.appendChild(tr);
+        })(rows[i], i);
+    }
+
+    _SDS_updateCounter(rows.length, _SDS_allData.length);
+}
+
+function _SDS_formatAmount(val) {
+    if (!val || val === '-' || val === '') return '';
+    var cleaned = String(val).replace(/[^0-9.\-]/g, '');
+    var num = parseFloat(cleaned);
+    if (isNaN(num)) return String(val).replace(/[^0-9,.\-]/g, '');
+    return num % 1 === 0
+        ? num.toLocaleString('en-US')
+        : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* ===== สร้าง PDF - ปรับรูปภาพให้ใหญ่ขึ้น ===== */
+function _SDS_generatePDF(item) {
+    var ts = _SDS_fmtTimestamp();
+    var filename = 'ใบขอเบิกสวัสดิการ_' + (item.employee_id || 'EMP') + '_' + (item.date || '').replace(/\//g, '-') + '.pdf';
+
+    var sig1Name = item.sig1_name || 'นางแอนนี ດວງພະຈັນ';
+    var sig2Name = item.sig2_name || 'นายธนพร ຈ້ຽຍສຸຂະ';
+    var sig1Position = _SDS_supervisorMap[sig1Name.trim()] || 'จนท.สวัสดิการและพนักงานสัมพันธ์';
+    var sig2Position = _SDS_supervisorMap[sig2Name.trim()] || 'ผู้จัดการส่วนปฎิบัติการทรัพยากรบุคคล';
+    var sig1HTML = (item.sig1_url && item.sig1_url.indexOf('http') === 0)
+        ? '<div class="sig-col-img-wrap"><img src="' + item.sig1_url + '" class="sig-col-img" crossorigin="anonymous"></div>'
+        : '<div class="sig-col-dots">.................................</div>';
+    var sig2HTML = (item.sig2_url && item.sig2_url.indexOf('http') === 0)
+        ? '<div class="sig-col-img-wrap"><img src="' + item.sig2_url + '" class="sig-col-img" crossorigin="anonymous"></div>'
+        : '<div class="sig-col-dots">.................................</div>';
+
+    // ======= PAGE 1 HTML (เหมือนเดิม) =======
+    var page1HTML =
+        '<div class="a4-sheet">' +
+        '<div class="doc-header">' +
+        '<div class="doc-logo"><img src="' + _SDS_LOGO_URL + '" alt="Logo" crossorigin="anonymous"></div>' +
+        '<div class="doc-title-center">แบบฟอร์มขอเบิกสวัสดิการ</div>' +
+        '<div class="doc-header-spacer"></div>' +
+        '</div>' +
+        '<div class="sec-box"><div class="sec-title">ข้อมูลส่วนพนักงาน</div><div class="sec-body"><div class="info-2col">' +
+        '<div class="info-left">' +
+        '<div class="info-row"><span class="info-lbl">รหัสพนักงาน :</span><span class="info-val">' + (item.employee_id || '') + '</span></div>' +
+        '<div class="info-row"><span class="info-lbl">ชื่อ และ นามสกุล :</span><span class="info-val">' + (item.full_name || '') + '</span></div>' +
+        '<div class="info-row"><span class="info-lbl">ตำแหน่ง :</span><span class="info-val">' + (item.position || '') + '</span></div>' +
+        '<div class="info-row"><span class="info-lbl">แผนก :</span><span class="info-val">' + (item.department || '') + '</span></div>' +
+        '</div><div class="info-right">' +
+        '<div class="info-row"><span class="info-lbl">โครงการ :</span><span class="info-val">' + (item.project || '') + '</span></div>' +
+        '<div class="info-row"><span class="info-lbl">บริษัท :</span><span class="info-val">' + (item.company || '') + '</span></div>' +
+        '<div class="info-row"><span class="info-lbl">อายุงาน :</span><span class="info-val">' + (item.tenure || '') + '</span></div>' +
+        '<div class="info-row"><span class="info-lbl">เบอร์โทร :</span><span class="info-val">' + (item.phone || '') + '</span></div>' +
+        '</div></div></div></div>' +
+        '<div class="sec-box"><div class="sec-title">ส่วนรายการขอเบิกสวัสดิการ</div><div class="sec-body">' +
+        '<div class="info-row-full"><span class="info-lbl-lg">หัวข้อสวัสดิการ ผลตอบแทน :</span><span class="info-val-full">' + (item.topic || '') + '</span></div>' +
+        '<div class="info-row-full"><span class="info-lbl-lg">รายการสวัสดิการ :</span><span class="info-val-full">' + (item.items || '') + '</span></div>' +
+        '<div class="info-row-full"><span class="info-lbl-lg">หมายเหตุ :</span><span class="info-val-full">' + (item.remark || '') + '</span></div>' +
+        '<div class="info-row-full"><span class="info-lbl-lg">วันที่ :</span><span class="info-val-full">' + (item.date || '–') + '</span></div>' +
+        '<div class="info-row-full"><span class="info-lbl-lg">จำนวนเงิน :</span><span class="info-val-full">' + _SDS_formatAmount(item.amount) + '</span></div>' +
+        '</div></div>' +
+        '<div class="sig-emp-section">' +
+        '<div class="p2-sig-label">ลงชื่อพนักงานผู้ร้องขอ :</div>' +
+        '<div class="sig-emp-dots">.............................</div>' +
+        '<div class="sig-emp-name">( ' + (item.full_name || '') + ' )</div>' +
+        '<div class="sig-emp-date">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>วันที่:</strong><span style="color:#555;letter-spacing:1px;">..... / ..... / .......</span></div>' +
+        '</div>' +
+        '<div class="sig-bottom-wrap">' +
+        '<div class="sig-col"><div class="sig-col-label">ลงชื่อ:</div>' + sig1HTML +
+        '<div class="sig-col-name">( ' + sig1Name + ' )</div>' +
+        '<div class="sig-col-date"><strong>วันที่ :</strong><span style="color:#555;">......... / ......... / .........</span></div>' +
+        '<div class="sig-col-role">'+ sig1Position +'</div></div>' +
+        '<div class="sig-col"><div class="sig-col-label">ลงชื่อ:</div>' + sig2HTML +
+        '<div class="sig-col-name">( ' + sig2Name + ' )</div>' +
+        '<div class="sig-col-date"><strong>วันที่ :</strong><span style="color:#555;">......... / ......... / .........</span></div>' +
+        '<div class="sig-col-role">' + sig2Position + '</div></div>' +
+        '</div>' +
+        '<div class="doc-timestamp">' + ts + '</div>' +
+        '</div>';
+
+    Swal.fire({
+        title: '<i class="fas fa-file-pdf" style="color:#dc2626;"></i> กำลังสร้าง PDF...',
+        html: 'กรุณารอสักครู่',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: function () { Swal.showLoading(); }
+    });
+
+    // ======= PAGE 2: คำนวณ photo height จาก pixel จริง =======
+
+    // กำหนด page 2 เป็น pixel คงที่ 794x1123 (A4 at 96dpi)
+    var PAGE_W = 794;
+    var PAGE_H = 1123;
+    var PAD_T  = 30;   // padding-top
+    var PAD_B  = 38;   // padding-bottom
+    var PAD_LR = 45;   // padding-left/right (ไม่ใช้ในการคำนวณ height)
+
+    // Step 1: render page 2 โดยไม่ใส่รูป เพื่อวัด height ของ elements อื่น
+    var probeDiv = document.createElement('div');
+    probeDiv.style.cssText = 'position:absolute;top:-99999px;left:0;width:' + PAGE_W + 'px;background:white;';
+    probeDiv.innerHTML =
+        '<div style="width:' + PAGE_W + 'px;height:' + PAGE_H + 'px;padding:' + PAD_T + 'px ' + PAD_LR + 'px ' + PAD_B + 'px;box-sizing:border-box;font-family:Sarabun,Noto Sans Thai,sans-serif;">' +
+            '<div id="_probe_condTitle" class="p2-cond-title lao-text"><u>เงื่อนไข:</u></div>' +
+            '<div id="_probe_condBox" class="p2-cond-box lao-text">-</div>' +
+            // photo-wrap ไม่ใส่ height เพื่อไม่ให้รบกวนการวัด
+            '<div id="_probe_sigWrap" class="p2-sig-wrap">' +
+                '<div class="p2-sig-label">ลงชื่อพนักงานผู้ร้องขอ :</div>' +
+                '<div class="p2-sig-dots">.........................</div>' +
+                '<div class="p2-sig-name">( ' + (item.full_name || '') + ' )</div>' +
+                '<div class="p2-sig-date"><strong>วันที่ :</strong><span style="color:#555;">....... / ....... / .......</span></div>' +
+            '</div>' +
+            '<div id="_probe_tsEl" class="doc-timestamp">' + ts + '</div>' +
+        '</div>';
+    document.body.appendChild(probeDiv);
+
+    requestAnimationFrame(function () {
+        // วัดความสูงจริงของแต่ละ element
+        var hCondTitle = document.getElementById('_probe_condTitle').offsetHeight;
+        var hCondBox   = document.getElementById('_probe_condBox').offsetHeight;
+        var hSigWrap   = document.getElementById('_probe_sigWrap').offsetHeight;
+
+        // margin ระหว่าง elements (จาก CSS: margin-bottom:6px ของ cond-box, margin-top:10px ของ sig-wrap)
+        var margins = 6 + 10;
+
+        // พื้นที่ใช้งานสุทธิ (ไม่รวม padding top/bottom)
+        var innerH = PAGE_H - PAD_T - PAD_B;
+
+        // photo height = พื้นที่ทั้งหมด - elements อื่น - margins - border/padding ของ photo-wrap (6px*2=12)
+        var photoH = innerH - hCondTitle - hCondBox - hSigWrap - margins - 12;
+        photoH = Math.max(photoH, 300); // ขั้นต่ำ 300px กันพลาด
+
+        document.body.removeChild(probeDiv);
+
+        // Step 2: สร้าง page 2 HTML จริงพร้อม photo height ที่คำนวณได้
+        var photoContent = (item.image_url && item.image_url.indexOf('http') === 0)
+            ? '<img src="' + item.image_url + '" crossorigin="anonymous" style="width:100%;height:100%;object-fit:contain;display:block;">'
+            : '<div style="color:#ccc;font-size:2rem;text-align:center;line-height:' + photoH + 'px;">📷</div>';
+
+        var page2HTML =
+            '<div style="width:' + PAGE_W + 'px;height:' + PAGE_H + 'px;padding:' + PAD_T + 'px ' + PAD_LR + 'px ' + PAD_B + 'px;box-sizing:border-box;font-family:Sarabun,Noto Sans Thai,sans-serif;background:white;position:relative;">' +
+                '<div class="p2-cond-title lao-text"><u>เงื่อนไข:</u></div>' +
+                '<div class="p2-cond-box lao-text">-</div>' +
+                // ✅ กำหนด height จากการคำนวณ ไม่ใช้ CSS min/max
+                '<div style="width:100%;height:' + photoH + 'px;border:1.5px solid #444;padding:6px;background:white;box-sizing:border-box;overflow:hidden;">' +
+                    photoContent +
+                '</div>' +
+                '<div class="p2-sig-wrap">' +
+                    '<div class="p2-sig-label">ลงชื่อพนักงานผู้ร้องขอ :</div>' +
+                    '<div class="p2-sig-dots">.........................</div>' +
+                    '<div class="p2-sig-name">( ' + (item.full_name || '') + ' )</div>' +
+                    '<div class="p2-sig-date"><strong>วันที่ :</strong><span style="color:#555;letter-spacing:1px;">....... / ....... / .......</span></div>' +
+                '</div>' +
+                '<div class="doc-timestamp">' + ts + '</div>' +
+            '</div>';
+
+        // Step 3: render ทั้ง 2 หน้าด้วย html2canvas
+        var opts = { scale: 2, useCORS: true, allowTaint: true, logging: false, imageTimeout: 20000, backgroundColor: '#ffffff' };
+
+        function waitImgs(el, cb) {
+            var imgs = el.querySelectorAll('img');
+            if (!imgs.length) { cb(); return; }
+            var done = 0;
+            function tick() { if (++done >= imgs.length) cb(); }
+            for (var i = 0; i < imgs.length; i++) {
+                if (imgs[i].complete && imgs[i].naturalWidth > 0) { tick(); }
+                else { imgs[i].onload = tick; imgs[i].onerror = tick; }
+            }
+        }
+
+        // Render Page 1
+        var stage1 = document.createElement('div');
+        stage1.style.cssText = 'position:absolute;top:-99999px;left:0;background:white;';
+        stage1.innerHTML = page1HTML;
+        document.body.appendChild(stage1);
+
+        waitImgs(stage1, function () {
+            requestAnimationFrame(function () {
+                html2canvas(stage1.firstChild, opts).then(function (canvas1) {
+                    var img1 = canvas1.toDataURL('image/jpeg', 0.97);
+                    document.body.removeChild(stage1);
+
+                    // Render Page 2
+                    var stage2 = document.createElement('div');
+                    stage2.style.cssText = 'position:absolute;top:-99999px;left:0;background:white;';
+                    stage2.innerHTML = page2HTML;
+                    document.body.appendChild(stage2);
+
+                    waitImgs(stage2, function () {
+                        requestAnimationFrame(function () {
+                            html2canvas(stage2.firstChild, opts).then(function (canvas2) {
+                                var img2 = canvas2.toDataURL('image/jpeg', 0.97);
+                                document.body.removeChild(stage2);
+
+                                var jsPDF = window.jspdf.jsPDF;
+                                var pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                                pdf.addImage(img1, 'JPEG', 0, 0, 210, 297);
+                                pdf.addPage();
+                                pdf.addImage(img2, 'JPEG', 0, 0, 210, 297);
+                                pdf.save(filename);
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'ดาวน์โหลดสำเร็จ!',
+                                    text: 'บันทึกไฟล์: ' + filename,
+                                    confirmButtonColor: '#1e3a5f',
+                                    timer: 2500,
+                                    timerProgressBar: true
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+}
+
+function _SDS_applyFilter() {
+    var kw      = document.getElementById('_SDS_filterInput').value.toLowerCase().trim();
+    var fromVal = document.getElementById('_SDS_dateFrom').value;
+    var toVal   = document.getElementById('_SDS_dateTo').value;
+    var fromDt  = fromVal ? new Date(fromVal) : null;
+    var toDt    = toVal   ? new Date(toVal)   : null;
+    if (toDt) toDt.setHours(23, 59, 59, 999);
+
+    var result = [];
+    for (var i = 0; i < _SDS_allData.length; i++) {
+        var item = _SDS_allData[i];
+        if (kw) {
+            var hay = (item.employee_id + ' ' + item.full_name + ' ' + item.topic + ' ' + item.items).toLowerCase();
+            if (hay.indexOf(kw) === -1) continue;
+        }
+        if (fromDt || toDt) {
+            var itemDt = _SDS_parseDateStr(item.date);
+            if (!itemDt) continue;
+            if (fromDt && itemDt < fromDt) continue;
+            if (toDt   && itemDt > toDt)   continue;
+        }
+        result.push(item);
+    }
+    _SDS_renderRows(result);
+}
+
+function _SDS_filterToday() {
+    var today = _SDS_getTodayISO();
+    document.getElementById('_SDS_dateFrom').value = today;
+    document.getElementById('_SDS_dateTo').value   = today;
+    _SDS_applyFilter();
+}
+
+function _SDS_clearFilter() {
+    document.getElementById('_SDS_filterInput').value = '';
+    document.getElementById('_SDS_dateFrom').value    = '';
+    document.getElementById('_SDS_dateTo').value      = '';
+    _SDS_renderRows(_SDS_allData);
+}
+
+function _SDS_handleExport(sel) {
+    if (!sel.value) return;
+    _SDS_exportToExcel();
+    sel.value = '';
+}
+
+function _SDS_exportToExcel() {
+    var hdr  = [['ลำดับ', 'ชื่อ-นามสกุล / รหัสพนักงาน', 'หัวข้อการขอเบิก', 'รายการขอเบิก', 'วันที่']];
+    var rows = [];
+    var trs  = document.querySelectorAll('#_SDS_tableBody tr');
+    for (var i = 0; i < trs.length; i++) {
+        var tds = trs[i].querySelectorAll('td');
+        if (tds.length < 6) continue;
+        rows.push([
+            tds[0].textContent.trim(),
+            tds[4].textContent.replace(/\n/g,' ').trim(),
+            tds[2].textContent.trim(),
+            tds[3].textContent.replace(/\n/g,' ').trim(),
+            tds[5].textContent.trim()
+        ]);
+    }
+    if (rows.length === 0) { alert('ไม่มีข้อมูลให้ดาวน์โหลด'); return; }
+    var ws = XLSX.utils.aoa_to_sheet(hdr.concat(rows));
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'ขอเบิกสวัสดิการ');
+    XLSX.writeFile(wb, 'ขอเบิกสวัสดิการ_' + new Date().toISOString().split('T')[0] + '.xlsx');
+}
+
+function _SDS_showAlert(msg) {
+    var box = document.createElement('div');
+    box.className   = '_SDS_alert-box';
+    box.textContent = msg;
+    document.body.appendChild(box);
+    setTimeout(function() { if (box.parentNode) box.parentNode.removeChild(box); }, 2500);
+}
+
+function _SDS_autoFetch() {
+    if (_SDS_isFetching) return;
+    if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+    _SDS_isFetching = true;
+
+    google.script.run
+        .withSuccessHandler(function(raw) {
+            _SDS_isFetching = false;
+            var formatted = [];
+            if (Array.isArray(raw)) {
+                for (var i = 0; i < raw.length; i++) {
+                    var r = _SDS_mapRow(raw[i]);
+                    if (r) formatted.push(r);
+                }
+            }
+            var newHash = _SDS_hashData(formatted);
+            if (newHash !== _SDS_lastHash) {
+                _SDS_lastHash = newHash;
+                _SDS_sortByDate(formatted);
+                _SDS_allData = formatted;
+                _SDS_renderRows(_SDS_allData);
+            }
+            var dot = document.getElementById('_SDS_liveDot');
+            if (dot) {
+                dot.style.opacity = '0.3';
+                setTimeout(function() { dot.style.opacity = '1'; }, 300);
+            }
+        })
+        .withFailureHandler(function() {
+            _SDS_isFetching = false;
+        })
+        .getScanOutData_sawadeekan();
+}
+
+function _SDS_startLive() {
+    if (_SDS_autoTimer) clearInterval(_SDS_autoTimer);
+    _SDS_autoTimer = setInterval(_SDS_autoFetch, 5000);
+}
+
+window.addEventListener('load', function() {
+    _SDS_fetchData();
+});
+</script>
+</body>
+</html>
