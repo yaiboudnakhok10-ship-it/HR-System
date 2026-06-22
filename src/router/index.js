@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'  // ← เปลี่ยน
 import employees         from '../pages/employeesPage.vue'
 import users             from '../pages/usersPage.vue'
 import Formemployees     from '../pages/FormemployeesPage.vue'
@@ -13,7 +13,7 @@ import formwarning       from '../pages/formwarningPage.vue'
 import verbaWarningPage  from '../pages/verbal_warningPage.vue'
 import DashboardPage     from '../pages/dashboardPage.vue'
 import LoginPage         from '../pages/LoginPage.vue'
-import RegulationType    from '../pages/RegulationType.vue'  // ✅ เพิ่มใหม่
+import RegulationType    from '../pages/RegulationType.vue'
 import AminViewLayout    from '../pages/Admin/Layouts/AminViewLayout.vue'
 import CompanyPage       from '../pages/Admin/view/CompanyWithdrawal.vue'
 import CompanyWithdrawalShow from '../pages/Admin/view/CompanyWithdrawalShow.vue'
@@ -26,7 +26,7 @@ import SupervisorSignaturePage from '../pages/Admin/view/vue_supervisors.vue'
 import UserLayout        from '../layouts/UserLayout.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),  // ← เปลี่ยน
   routes: [
     {
       path: '/login',
