@@ -30,8 +30,10 @@ export const useVerbalWarningStore = defineStore('verbalWarning', () => {
           detail:            JSON.stringify({
             text: emp.damageDetail || '',
             reg_type: step2.regulationTypeName || '',
-            reg_list: step2.regulationList || []
+            reg_list: step2.regulationList || [],
+            history_detail: step2.historyDetail || ''
           }),
+          history_detail:    step2.historyDetail || '',
           damage_personal:   step1.damagePersonal,
           damage_asset:      step1.damageAsset,
           damage_other:      step1.damageOther,
@@ -92,8 +94,10 @@ export const useVerbalWarningStore = defineStore('verbalWarning', () => {
           detail:            JSON.stringify({
             text: emp.damageDetail || '',
             reg_type: step2.regulationTypeName || '',
-            reg_list: step2.regulationList || []
+            reg_list: step2.regulationList || [],
+            history_detail: step2.historyDetail || ''
           }) || '',
+          history_detail:    step2.historyDetail || '',
 
           // ── step 1 ──
           damage_personal:   step1.damagePersonal || false,

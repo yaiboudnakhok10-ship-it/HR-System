@@ -311,7 +311,7 @@ const loadScript = (src) => new Promise((resolve, reject) => {
 // ─── Build HTML (แบบ 1 ใบต่อหน้า A4 ตามฟอร์มต้นฉบับ) ────────────────────────
 const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
   // ✅ ตรวจสอบว่า detail เป็น JSON หรือไม่
-  let parsedDetail = { text: '', reg_type: '', reg_list: [] }
+  let parsedDetail = { text: '', reg_type: '', reg_list: [], history_detail: '' }
   try {
     if (c.detail && (c.detail.startsWith('{') || c.detail.startsWith('['))) {
       parsedDetail = JSON.parse(c.detail)
@@ -321,6 +321,8 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
   } catch {
     parsedDetail.text = c.detail || ''
   }
+
+  const historyDetail = c.history_detail || parsedDetail.history_detail || ''
 
   const empName        = c.employee_name     || ''
   const empCode        = c.employee_code     || ''
@@ -368,10 +370,10 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     <div style="margin-bottom:8px;">
       <div style="display:flex;align-items:flex-end;gap:3px;line-height:1;">
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ລົງຊື່</span>
-        ${line('120px')}
+        ${line('180px')}
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ວັນທີ____/____/______</span>
       </div>
-      <div style="margin-top:3px;margin-left:28px;width:120px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
+      <div style="margin-top:3px;margin-left:28px;width:180px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
         <div>(${name || '____________________'})</div>
         <div>${detail}</div>
       </div>
@@ -381,10 +383,10 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     <div style="margin-bottom:8px;">
       <div style="display:flex;align-items:flex-end;gap:3px;line-height:1;">
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ລົງຊື່</span>
-        ${line('120px')}
+        ${line('200px')}
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ວັນທີ____/____/______</span>
       </div>
-      <div style="margin-top:3px;margin-left:28px;width:120px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
+      <div style="margin-top:3px;margin-left:28px;width:200px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
         <div>(____________________)</div>
         <div>ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
       </div>
@@ -392,8 +394,8 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
 
   const hrSigBox = `
     <span style="display:inline-flex;align-items:flex-end;justify-content:center;
-      width:180px;min-height:68px;border-bottom:1px solid #555;overflow:hidden;flex-shrink:0;">
-      ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:178px;max-height:66px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
+      width:120px;min-height:50px;border-bottom:1px solid #888;overflow:hidden;flex-shrink:0;">
+      ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:118px;max-height:48px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
     </span>`
 
   const hrSigBlockFull = `
@@ -403,7 +405,7 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
         ${hrSigBox}
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ວັນທີ____/____/______</span>
       </div>
-      <div style="margin-top:3px;margin-left:28px;width:180px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
+      <div style="margin-top:3px;margin-left:28px;width:120px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
         <div>(${hrName || '____________________'})</div>
         <div>${hrResponsib}</div>
       </div>
@@ -565,6 +567,10 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:5px;">${chk(neverPunish)}<span style="font-size:9.5px;">ບໍ່ເຄີຍ</span></div>
         <div style="display:flex;align-items:center;gap:5px;">${chk(hasPunish)}<span style="font-size:9.5px;">ເຄີຍຖຶກໂທດທາງວິໄນ</span></div>
+      </div>
+      <div style="margin-top:4px;">
+        <div style="font-size:9px;font-weight:600;">ລາຍລະອຽດປະຫວັດ:</div>
+        <div style="font-size:8.5px;line-height:1.4;padding-left:4px;">${historyDetail || ''}</div>
       </div>
       <hr class="hr-thin">
       <div style="font-size:9px;margin-top:4px;">

@@ -249,6 +249,18 @@
                       <input type="checkbox" v-model="step2.historyHas" id="s2has" @change="onHistoryHasChange">
                       <label for="s2has" class="cb-label">ເຄີຍຖຶກໂທດທາງວິໄນ</label>
                     </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                      <label class="form-label" style="color: #ea580c;">
+                        <i class="fas fa-info-circle" style="margin-right: 5px;"></i>
+                        ລາຍລະອຽດປະຫວັດ
+                      </label>
+                      <textarea
+                        class="form-control"
+                        v-model="step2.historyDetail"
+                        placeholder="ປ້ອນລາຍລະອຽດປະຫວັດການກະທຳຄວາມຜິດ ແລະ ການຖືກລົງໂທດ"
+                        rows="3"
+                      ></textarea>
+                    </div>
                   </div>
                   <div class="form-group">
                     <label class="form-label">ลงชื่อ (HR)</label>
@@ -261,13 +273,13 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label">รูปภาพลายเซ็น HR</label>
-                    <div v-if="step2.hrImg" style="margin-top:6px;padding:10px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:8px;">
-                      <img :src="step2.hrImg" style="max-height:70px;border:1px solid #ddd;border-radius:6px;display:block;">
-                      <span v-if="step2.hrResponsibility" style="font-size:11px;color:#c2410c;margin-top:5px;display:block;font-weight:600;">
+                    <div v-if="step2.hrImg" style="margin-top:6px;padding:8px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:8px;">
+                      <img :src="step2.hrImg" style="max-height:50px;border:1px solid #ddd;border-radius:6px;display:block;">
+                      <span v-if="step2.hrResponsibility" style="font-size:10px;color:#c2410c;margin-top:4px;display:block;font-weight:600;">
                         {{ step2.hrResponsibility }}
                       </span>
                     </div>
-                    <div v-else style="font-size:12px;color:#94a3b8;margin-top:6px;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;text-align:center;">
+                    <div v-else style="font-size:11px;color:#94a3b8;margin-top:6px;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;text-align:center;">
                       <i class="fas fa-image" style="margin-right:5px;"></i> เลือก HR เพื่อแสดงรูปลายเซ็น
                     </div>
                   </div>
@@ -393,6 +405,9 @@
                 <div v-if="step2.historyNever || step2.historyHas">
                   <strong>ປະຫວັດ:</strong>
                   {{ step2.historyNever ? 'ບໍ່ເຄີຍ' : 'ເຄີຍຖຶກໂທດທາງວິໄນ' }}
+                </div>
+                <div v-if="step2.historyDetail" style="padding-left: 20px; color: #64748b; font-size: 12px;">
+                  <strong>ລາຍລະອຽດ:</strong> {{ step2.historyDetail }}
                 </div>
                 <div v-if="step2.hrName"><strong>HR:</strong> {{ step2.hrName }} <span v-if="step2.hrResponsibility">({{ step2.hrResponsibility }})</span></div>
                 <div v-if="step3.witness1Name"><strong>ພະຍານ:</strong> {{ step3.witness1Name }} — {{ step3.witness1Detail }}</div>
@@ -545,6 +560,7 @@ const step2 = ref({
   hasViolation: false,
   historyNever: false,
   historyHas: false,
+  historyDetail: '',
   hrId: null, hrName: '', hrResponsibility: '', hrImg: '',
   // ✅ เพิ่มฟิลด์กฎระเบียบ
   regulationTypeId:   null,
@@ -676,10 +692,11 @@ const resetAll = () => {
   emp.value = { code: '', name: '', dept: '', damage: '', startDate: '', location: '', witness: '', witnessCode: '', damageDetail: '', damageValue: '' }
   step1.value = { damagePersonal: false, damageAsset: false, damageOther: false }
   step2.value = {
-    hasViolation: false, historyNever: false, historyHas: false,
-    hrId: null, hrName: '', hrResponsibility: '', hrImg: '',
-    regulationTypeId: null, regulationTypeName: '', regulationList: [],
-  }
+      hasViolation: false, historyNever: false, historyHas: false,
+      historyDetail: '',
+      hrId: null, hrName: '', hrResponsibility: '', hrImg: '',
+      regulationTypeId: null, regulationTypeName: '', regulationList: [],
+    }
   step3.value = {
     punishGroup: 'verbal',
     punish1: false, punish2: false, punish3: false, punish4: false,
@@ -753,6 +770,7 @@ const loadCaseForEdit = async (id) => {
       hasViolation: !!data.has_violation,
       historyNever: String(data.history_type || 'never') !== 'has',
       historyHas: String(data.history_type || 'never') === 'has',
+      historyDetail: data.history_detail || detailObj.history_detail || '',
       hrId: matchSignatureId(data.hr_name, data.hr_image),
       hrName: data.hr_name || '',
       hrResponsibility: data.hr_responsibility || '',
@@ -873,12 +891,13 @@ const getPrintHTML = (itemData = null) => {
   const hasAsset    = targetStep1.damageAsset
   const hasOther    = targetStep1.damageOther
 
-  const hasViol     = targetStep2.hasViolation
-  const neverPunish = targetStep2.historyNever
-  const hasPunish   = targetStep2.historyHas
-  const hrName      = targetStep2.hrName           || ''
-  const hrResponsib = targetStep2.hrResponsibility || 'ພະຍານHR'
-  const hrImgSrc    = targetStep2.hrImg
+  const hasViol        = targetStep2.hasViolation
+  const neverPunish    = targetStep2.historyNever
+  const hasPunish      = targetStep2.historyHas
+  const historyDetail  = targetStep2.historyDetail || ''
+  const hrName         = targetStep2.hrName          || ''
+  const hrResponsib    = targetStep2.hrResponsibility || 'ພະຍາຍHR'
+  const hrImgSrc       = targetStep2.hrImg
 
   // ✅ ดึงรายการกฎระเบียบที่เลือก
   const regulationList     = targetStep2.regulationList     || []
@@ -903,10 +922,10 @@ const getPrintHTML = (itemData = null) => {
     <div style="margin-bottom:8px;">
       <div style="display:flex;align-items:flex-end;gap:3px;line-height:1;">
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ລົງຊື່</span>
-        ${line('150px')}
+        ${line('180px')}
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ວັນທີ____/____/______</span>
       </div>
-      <div style="margin-top:3px;margin-left:28px;width:150px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
+      <div style="margin-top:3px;margin-left:28px;width:180px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
         <div>(${name || '____________________'})</div>
         <div>${detail}</div>
       </div>
@@ -916,10 +935,10 @@ const getPrintHTML = (itemData = null) => {
     <div style="margin-bottom:8px;">
       <div style="display:flex;align-items:flex-end;gap:3px;line-height:1;">
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ລົງຊື່</span>
-        ${line('150px')}
+        ${line('200px')}
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ວັນທີ____/____/______</span>
       </div>
-      <div style="margin-top:3px;margin-left:28px;width:150px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
+      <div style="margin-top:3px;margin-left:28px;width:200px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
         <div>(____________________)</div>
         <div>ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
       </div>
@@ -927,8 +946,8 @@ const getPrintHTML = (itemData = null) => {
 
   const hrSigBox = `
     <span style="display:inline-flex;align-items:flex-end;justify-content:center;
-      width:180px;min-height:68px;border-bottom:1px solid #555;overflow:hidden;flex-shrink:0;">
-      ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:178px;max-height:66px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
+      width:120px;min-height:50px;border-bottom:1px solid #888;overflow:hidden;flex-shrink:0;">
+      ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:118px;max-height:48px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
     </span>`
 
   const hrSigBlockFull = `
@@ -938,7 +957,7 @@ const getPrintHTML = (itemData = null) => {
         ${hrSigBox}
         <span style="font-size:9px;white-space:nowrap;padding-bottom:1px;">ວັນທີ____/____/______</span>
       </div>
-      <div style="margin-top:3px;margin-left:28px;width:180px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
+      <div style="margin-top:3px;margin-left:28px;width:120px;text-align:center;font-size:9px;line-height:1.15;word-break:break-word;">
         <div>(${hrName || '____________________'})</div>
         <div>${hrResponsib}</div>
       </div>
@@ -1092,6 +1111,10 @@ const getPrintHTML = (itemData = null) => {
         <div style="display:flex;align-items:center;gap:5px;">${chk(neverPunish)}<span style="font-size:9.5px;">ບໍ່ເຄີຍ</span></div>
         <div style="display:flex;align-items:center;gap:5px;">${chk(hasPunish)}<span style="font-size:9.5px;">ເຄີຍຖຶກໂທດທາງວິໄນ</span></div>
       </div>
+      <div style="margin-top:4px;">
+        <div style="font-size:9px;font-weight:600;">ລາຍລະອຽດປະຫວັດ:</div>
+        <div style="font-size:8.5px;line-height:1.4;padding-left:4px;">${historyDetail || ''}</div>
+      </div>
       <hr class="hr-thin">
       <div style="font-size:9px;margin-top:4px;">
         <div style="display:flex;align-items:flex-end;gap:6px;line-height:1;">
@@ -1191,6 +1214,15 @@ const submitAndPrint = async (itemData = null) => {
       },
       step3: targetStep3,
     }
+    
+    console.log('✅ Saving payload:', payload)
+    console.log('✅ step2.historyDetail:', payload.step2.historyDetail)
+    console.log('✅ detail JSON will be:', JSON.stringify({
+      text: payload.emp.damageDetail || '',
+      reg_type: payload.step2.regulationTypeName || '',
+      reg_list: payload.step2.regulationList || [],
+      history_detail: payload.step2.historyDetail || ''
+    }))
 
     const result = isEditingThisForm
       ? await verbalWarningStore.updateCase(editId.value, {

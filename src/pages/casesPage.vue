@@ -316,10 +316,10 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
   const hasOther    = types.includes('other')
 
   const historyStr  = c.history_type || ''
-  const historyTypes = historyStr.split(',').map(s => s.trim())
-  const neverPunish  = historyTypes.includes('never')
-  const hasPunish    = historyTypes.includes('has')
+  const neverPunish  = historyStr === 'never'
+  const hasPunish    = historyStr === 'has'
   const hasViol      = !!(c.has_violation)
+  const historyDetail = c.history_detail || ''
 
   const regulationList     = Array.isArray(c.regulation_list)     ? c.regulation_list     : []
   const regulationTypeName = c.regulation_type_name || ''
@@ -399,26 +399,26 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     ${logo1b64 ? `<img src="${logo1b64}" style="height:22px;width:auto;object-fit:contain;">` : ''}
     ${logo2b64 ? `<img src="${logo2b64}" style="height:22px;width:auto;object-fit:contain;">` : ''}`
 
-  const hrSigBox = `<span style="border-bottom:1px solid #888;display:inline-flex;align-items:flex-end;justify-content:center;width:180px;min-height:68px;overflow:hidden;flex-shrink:0;">
-    ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:178px;max-height:66px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
+  const hrSigBox = `<span style="border-bottom:1px solid #888;display:inline-flex;align-items:flex-end;justify-content:center;width:120px;min-height:50px;overflow:hidden;flex-shrink:0;">
+    ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:118px;max-height:48px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
   </span>`
 
   const docSigBlock = (name, detail) => `
-    <div style="margin-bottom:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:220px; min-height:40px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="margin-bottom:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:180px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
-      <div style="font-size:10px; margin-top:4px;">(${name}) ${detail}</div>
+      <div style="font-size:9px; margin-top:3px;">(${name}) ${detail}</div>
     </div>`
 
   const punisherSigBlock = `
-    <div style="margin-bottom:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:250px; min-height:40px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="margin-bottom:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:200px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
-      <div style="font-size:10px; margin-top:4px;">(_________________) ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
+      <div style="font-size:9px; margin-top:3px;">(_________________) ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
     </div>`
 
   const punish5Label = punishTypes.includes('other')
@@ -554,7 +554,7 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     </div>
     <div class="bottom-section">
       <div class="note-txt">ຂ້າພະເຈົ້າຂໍຮັບຮອງວ່າຂໍ້ມູນຂ້າງເທິງເປັນຄວາມຈິງທູກປະການ</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px 30px;margin-top:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 30px;margin-top:8px;">
         <div>${docSigBlock(investigator, 'ຜູ້ສອບສວນ/ຜູ້ບັງຄັບບັນຊາ')}</div>
         <div>${docSigBlock(empName, 'ພະນັກງານທີ່ກະທຳຄວາມຜິດ')}</div>
       </div>
@@ -577,13 +577,17 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
         <span class="chk-lg">${neverPunish ? '✓' : ''}</span><span>ບໍ່ເຄີຍ</span>&nbsp;
         <span class="chk-lg">${hasPunish ? '✓' : ''}</span><span>ເຄີຍຖຶກໂທດທາງວິໄນ</span>
       </div>
+      <div style="margin-top:5px;">
+        <div style="font-size:10px;font-weight:600;">ລາຍລະອຽດປະຫວັດ:</div>
+        <div style="font-size:9.5px;line-height:1.5;padding-left:4px;">${historyDetail || ''}</div>
+      </div>
       <hr class="hr-thin">
       <div style="font-size:10px;margin-top:4px;">
         <div style="display:flex;align-items:flex-end;gap:6px;line-height:1;">
           <span style="white-space:nowrap;line-height:1;min-width:70px;">ລົງຊື່ :</span>
           ${hrSigBox}
         </div>
-        <div style="margin-top:2px;margin-left:calc(70px + 6px);width:180px;text-align:center;font-size:9.5px;line-height:1.15;word-break:break-word;">
+        <div style="margin-top:2px;margin-left:calc(70px + 6px);width:120px;text-align:center;font-size:9.5px;line-height:1.15;word-break:break-word;">
           (${hrName || '____________________'})
         </div>
       </div>
@@ -617,23 +621,26 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
       ບໍລິສັດ ຈຶ່ງຂໍໃຫ້ທ່ານປັບປຸງຕົວ ຫາກທ່ານກະທຳຄວາມຜິດຊ້ຳ ອາດຖືກລົງໂທດຮ້າຍແຮງຂຶ້ນ ຮອດຂັ້ນເລີກຈ້າງໂດຍບໍ່ຈ່າຍຄ່າຊົດເຊີຍ
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
-      <div style="margin-bottom:6px;">${punisherSigBlock}</div>
-      <div style="margin-bottom:6px;">
-        <div style="display:flex;align-items:flex-end;gap:3px;">
+      <div style="margin-bottom:4px;">${punisherSigBlock}</div>
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;align-items:flex-end;gap:2px;">
           <span style="white-space:nowrap;line-height:1;">ລົງຊື່</span>
-          <span style="border-bottom:1px solid #888;display:inline-flex;align-items:center;justify-content:center;width:90px;min-height:48px;flex-shrink:0;"></span>
-          <span style="white-space:nowrap;font-size:9.5px;line-height:1;">ວັນທີ ____/____/______</span>
+          <span style="border-bottom:1px solid #888;display:inline-flex;align-items:center;justify-content:center;width:70px;min-height:35px;flex-shrink:0;"></span>
+          <span style="white-space:nowrap;font-size:9px;line-height:1;">ວັນທີ ____/____/______</span>
         </div>
-        <div style="font-size:10px;margin-top:2px;">(${empName}) ພະນັກງານ (ຜູ້ຖືກລົງໂທດ)</div>
+        <div style="font-size:9px;margin-top:2px;">(${empName}) ພະນັກງານ (ຜູ້ຖືກລົງໂທດ)</div>
       </div>
-      <div style="margin-bottom:6px;">${docSigBlock(witness1Name, witness1Detail)}</div>
-      <div style="margin-bottom:6px;">
-        <div style="display:flex;align-items:flex-end;gap:3px;">
-          <span style="white-space:nowrap;line-height:1;min-width:28px;display:inline-block;">ລົງຊື່</span>
+      <div style="margin-bottom:4px;">${docSigBlock(witness1Name, witness1Detail)}</div>
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;align-items:flex-end;gap:2px;">
+          <span style="white-space:nowrap;line-height:1;min-width:25px;display:inline-block;">ລົງຊື່</span>
           ${hrSigBox}
-          <span style="white-space:nowrap;font-size:9.5px;line-height:1;">ວັນທີ ____/____/______</span>
+          <span style="white-space:nowrap;font-size:9px;line-height:1;">ວັນທີ ____/____/______</span>
         </div>
-        <div style="font-size:10px;margin-top:2px;">(${hrName}) ${hrResponsib}</div>
+        <div style="margin-top:2px;margin-left:calc(25px + 2px);width:120px;text-align:center;font-size:9px;line-height:1.1;word-break:break-word;">
+          <div>(${hrName || '____________________'})</div>
+          <div>${hrResponsib}</div>
+        </div>
       </div>
       <div>${docSigBlock(witness2Name, witness2Detail)}</div>
       <div></div>
@@ -683,16 +690,16 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     <div style="width:38%;padding:3px 8px;background:#fff;font-weight:700;font-size:10.5px;">ຜູ້ອະນຸມັດ (ກຳມະການຜູ້ຈັດການ)</div>
   </div>
   <div style="display:flex;border:1px solid #999;border-top:none;margin-bottom:0;">
-    <div style="width:62%;padding:10px;border-right:1px solid #999;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:220px; min-height:35px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="width:62%;padding:8px;border-right:1px solid #999;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:180px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
     </div>
-    <div style="width:38%;padding:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:180px; min-height:35px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="width:38%;padding:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:150px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
     </div>
   </div>

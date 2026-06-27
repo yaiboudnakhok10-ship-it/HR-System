@@ -436,13 +436,27 @@
                   <div class="form-group">
                     <label class="form-label">ปะຫວັດກະທຳຄວາມຜິດ ແລະ ຖືກລົງໂທດ</label>
                     <div class="cb-group">
-                      <input type="checkbox" v-model="step2.historyTypes" value="never" id="s2never">
+                      <input type="checkbox" :checked="step2.historyType === 'never'" @change="onHistoryTypeChange('never')" id="s2never">
                       <label for="s2never" class="cb-label">ບໍ່ເຄີຍ</label>
                     </div>
                     <div class="cb-group">
-                      <input type="checkbox" v-model="step2.historyTypes" value="has" id="s2has">
+                      <input type="checkbox" :checked="step2.historyType === 'has'" @change="onHistoryTypeChange('has')" id="s2has">
                       <label for="s2has" class="cb-label">ເຄີຍຖຶກໂທດທາງວິໄນ</label>
                     </div>
+                    <transition name="fade">
+                      <div class="form-group" style="margin-top: 10px;">
+                        <label class="form-label" style="color:var(--primary-dark);">
+                          <i class="fas fa-info-circle" style="margin-right:5px;"></i>
+                          ລາຍລະອຽດປະຫວັດ
+                        </label>
+                        <textarea 
+                          class="form-control" 
+                          v-model="step2.historyDetail" 
+                          placeholder="ປ້ອນລາຍລະອຽດປະຫວັດການກະທຳຄວາມຜິດ ແລະ ການຖືກລົງໂທດ"
+                          rows="3"
+                        ></textarea>
+                      </div>
+                    </transition>
                   </div>
                   <div class="form-group">
                     <label class="form-label">ลงชื่อ (HR)</label>
@@ -455,13 +469,13 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label">รูปภาพลายเซ็น HR</label>
-                    <div v-if="step2.hrImg" style="margin-top:6px;padding:10px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:8px;">
-                      <img :src="step2.hrImg" style="max-height:70px;border:1px solid #ddd;border-radius:6px;display:block;">
-                      <span v-if="step2.hrResponsibility" style="font-size:11px;color:#0284c7;margin-top:5px;display:block;font-weight:600;">
+                    <div v-if="step2.hrImg" style="margin-top:6px;padding:8px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:8px;">
+                      <img :src="step2.hrImg" style="max-height:50px;border:1px solid #ddd;border-radius:6px;display:block;">
+                      <span v-if="step2.hrResponsibility" style="font-size:10px;color:#0284c7;margin-top:4px;display:block;font-weight:600;">
                         {{ step2.hrResponsibility }}
                       </span>
                     </div>
-                    <div v-else style="font-size:12px;color:#94a3b8;margin-top:6px;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;text-align:center;">
+                    <div v-else style="font-size:11px;color:#94a3b8;margin-top:6px;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;text-align:center;">
                       <i class="fas fa-image" style="margin-right:5px;"></i> เลือก HR เพื่อแสดงรูปลายเซ็น
                     </div>
                   </div>
@@ -601,7 +615,10 @@
                   <template v-if="step1.installments > 1">ແບ່ງ <strong>{{ step1.installments }} ງວດ</strong> — ງວດລະ <strong>{{ perInstallmentKip.toLocaleString() }} ກີບ</strong><br></template>
                   <template v-if="step1.payDate">ເລີ່ມຊຳລະ: <strong>{{ step1.payDate }}</strong></template>
                 </div>
-                <div v-if="step2.historyTypes && step2.historyTypes.length"><strong>ປະຫວັດ:</strong> {{ step2.historyTypes.includes('never') ? 'ບໍ່ເຄີຍ' : '' }}{{ step2.historyTypes.includes('has') ? (step2.historyTypes.includes('never') ? ', ' : '') + 'ເຄີຍຖຶກໂທດທາງວິໄນ' : '' }}</div>
+                <div v-if="step2.historyType"><strong>ປະຫວັດ:</strong> {{ step2.historyType === 'never' ? 'ບໍ່ເຄີຍ' : 'ເຄີຍຖຶກໂທດທາງວິໄນ' }}</div>
+                <div v-if="step2.historyDetail" style="padding-left:20px; color:#64748b; font-size:12px;">
+                  <strong>ລາຍລະອຽດ:</strong> {{ step2.historyDetail }}
+                </div>
                 <div v-if="step2.hrName"><strong>HR:</strong> {{ step2.hrName }} <span v-if="step2.hrResponsibility">({{ step2.hrResponsibility }})</span></div>
                 <div v-if="step3.witness1Name"><strong>ພະຍານ:</strong> {{ step3.witness1Name }} — {{ step3.witness1Detail }}</div>
                 <div v-if="step3.witness2Name"><strong>ຮັກສາການ:</strong> {{ step3.witness2Name }} — {{ step3.witness2Detail }}</div>
@@ -826,11 +843,12 @@ const step1 = ref({
 
 const step2 = ref({
   hasViolation: false,
-  historyTypes: [],
+  historyType: '',
+  historyDetail: '',
   hrId: null, hrName: '', hrResponsibility: '', hrImg: '',
-  regulationTypeId:   null,
+  regulationTypeId: null,
   regulationTypeName: '',
-  regulationList:     [],
+  regulationList: [],
 })
 
 const step3 = ref({
@@ -903,7 +921,8 @@ const loadCaseForEdit = async (id) => {
 
     step2.value = {
       hasViolation: !!data.has_violation,
-      historyTypes: [],
+      historyType: data.history_type || 'never',
+      historyDetail: data.history_detail || '',
       hrId: matchSignatureId(data.hr_name, data.hr_image),
       hrName: data.hr_name || '',
       hrResponsibility: data.hr_responsibility || '',
@@ -911,9 +930,6 @@ const loadCaseForEdit = async (id) => {
       regulationTypeId: matchRegTypeIdByName(data.regulation_type_name || ''),
       regulationTypeName: data.regulation_type_name || '',
       regulationList: Array.isArray(data.regulation_list) ? data.regulation_list : [],
-      historyType: data.history_type || 'never',
-      historyNever: String(data.history_type || 'never') !== 'has',
-      historyHas: String(data.history_type || 'never') === 'has'
     }
 
     const p = data.punish_types || []
@@ -1065,6 +1081,14 @@ const selectWitness = (item) => {
   witnessSuggestions.value = []
 }
 
+const onHistoryTypeChange = (type) => {
+  if (step2.value.historyType === type) {
+    step2.value.historyType = ''
+  } else {
+    step2.value.historyType = type
+  }
+}
+
 const closeSuggestDelay = (type) => {
   setTimeout(() => {
     if (type === 'emp')     suggestions.value        = []
@@ -1100,7 +1124,7 @@ const resetAll = () => {
   emp.value   = { code:'', name:'', dept:'', damage:'', startDate:'', location:'', witness:'', witnessCode:'', damageDetail:'', damageValue:'', investigator:'' }
   step1.value = { damagePersonal:false, damageAsset:false, damageOther:false, rateKip:'', amountBaht:'', percent:0, installments:'', payDate:'', currencyType:'baht', amountKipDirect:'' }
   step2.value = {
-    hasViolation:false, historyTypes:[],
+    hasViolation:false, historyType:'', historyDetail:'',
     hrId:null, hrName:'', hrResponsibility:'', hrImg:'',
     regulationTypeId: null, regulationTypeName: '', regulationList: [],
   }
@@ -1239,23 +1263,25 @@ const saveAndBuildPrintHtml = async (row) => {
   ])
 
   const result = await disciplineStore.saveCase({
-    emp:                row.emp,
-    step1:              row.step1,
-    step2:              row.step2,
-    step3:              row.step3,
-    step4:              row.step4,
-    step5:              row.step5,
-    totalKip:           row.totalKip,
-    amountAfterPercent: row.amountAfterPercent,
-    created_by:         auth.session?.fullname || auth.session?.username || null,
-    created_at:         new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
-    case_type:          row.caseType || null,
-    percent:            row.step1.percent || 0,
-    history_type:       row.step2.historyTypes.join(','),
-    currency_type:      row.step1.currencyType || 'baht',
-    // ✅ ส่ง amountKipDirect ด้วย
-    amount_kip_direct:  row.step1.currencyType === 'kip' ? (parseFloat(row.step1.amountKipDirect) || null) : null,
-  })
+        emp:                row.emp,
+        step1:              row.step1,
+        step2:              row.step2,
+        step3:              row.step3,
+        step4:              row.step4,
+        step5:              row.step5,
+        totalKip:           row.totalKip,
+        amountAfterPercent: row.amountAfterPercent,
+        created_by:         auth.session?.fullname || auth.session?.username || null,
+        created_at:         new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
+        case_type:          row.caseType || null,
+        percent:            row.step1.percent || 0,
+        history_type:       row.step2.historyType || 'never',
+        currency_type:      row.step1.currencyType || 'baht',
+        // ✅ ส่ง amountKipDirect ด้วย
+        amount_kip_direct:  row.step1.currencyType === 'kip' ? (parseFloat(row.step1.amountKipDirect) || null) : null,
+        // ✅ ส่ง historyDetail ด้วย
+        history_detail:     row.step2.historyDetail || null,
+      })
 
   if (!result.success) throw new Error(result.error)
 
@@ -1338,14 +1364,29 @@ const saveEditAndPrint = async () => {
       amountAfterPercent: rowData.amountAfterPercent,
       case_type:          rowData.caseType || null,
       percent:            rowData.step1.percent || 0,
-      history_type:       rowData.step2.historyTypes.join(','),
+      history_type:       rowData.step2.historyType || 'never',
       currency_type:      rowData.step1.currencyType || 'baht',
     }
 
     let result
-    if (typeof disciplineStore.updateCase === 'function') {
-      result = await disciplineStore.updateCase(editId.value, payload)
-    } else {
+      if (typeof disciplineStore.updateCase === 'function') {
+        result = await disciplineStore.updateCase(editId.value, {
+          emp:                payload.emp,
+          step1:              payload.step1,
+          step2:              payload.step2,
+          step3:              payload.step3,
+          step4:              payload.step4,
+          step5:              payload.step5,
+          totalKip:           payload.totalKip,
+          amountAfterPercent: payload.amountAfterPercent,
+          case_type:          payload.case_type || null,
+          percent:            payload.percent || 0,
+          history_type:       payload.history_type || 'never',
+          currency_type:      payload.currency_type || 'baht',
+          amount_kip_direct:  payload.step1.currencyType === 'kip' ? (parseFloat(payload.step1.amountKipDirect) || null) : null,
+          history_detail:     payload.step2.historyDetail || null,
+        })
+      } else {
       const punishTypes = []
       if (payload.step3.punish1) punishTypes.push('verbal')
       if (payload.step3.punish2) punishTypes.push('written1')
@@ -1387,6 +1428,7 @@ const saveEditAndPrint = async () => {
 
         has_violation: payload.step2.hasViolation || false,
         history_type:  payload.history_type || 'never',
+        history_detail: payload.step2.historyDetail || null,
         hr_name:       payload.step2.hrName || null,
         hr_image:      payload.step2.hrImg  || null,
         hr_responsibility: payload.step2.hrResponsibility || null,
@@ -1553,9 +1595,10 @@ const buildPrintHTML = (row) => {
   const hasOther    = row.step1.damageOther
 
   const hasViol     = row.step2.hasViolation
-  const neverPunish = row.step2.historyTypes.includes('never')
-  const hasPunish   = row.step2.historyTypes.includes('has')
-  const hrName      = row.step2.hrName           || '_________________'
+  const neverPunish = row.step2.historyType === 'never'
+  const hasPunish = row.step2.historyType === 'has'
+  const historyDetail = row.step2.historyDetail || ''
+  const hrName = row.step2.hrName || '_________________'
   const hrResponsib = row.step2.hrResponsibility || 'ພະຍານHR'
   const hrImgSrc    = row.step2.hrImg
 
@@ -1598,26 +1641,26 @@ const buildPrintHTML = (row) => {
     ? `<span style="width:11px;height:11px;border:1.5px solid #555;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;">✓</span>`
     : `<span style="width:11px;height:11px;border:1.5px solid #555;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"></span>`
 
-  const hrSigBox = `<span style="border-bottom:1px solid #888;display:inline-flex;align-items:flex-end;justify-content:center;width:150px;min-height:68px;overflow:hidden;flex-shrink:0;">
-    ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:148px;max-height:66px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
+  const hrSigBox = `<span style="border-bottom:1px solid #888;display:inline-flex;align-items:flex-end;justify-content:center;width:120px;min-height:50px;overflow:hidden;flex-shrink:0;">
+    ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:118px;max-height:48px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
   </span>`
 
   const docSigBlock = (name, detail) => `
-    <div style="margin-bottom:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:220px; min-height:40px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="margin-bottom:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:180px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
-      <div style="font-size:10px; margin-top:4px;">(${name}) ${detail}</div>
+      <div style="font-size:9px; margin-top:3px;">(${name}) ${detail}</div>
     </div>`
 
   const punisherSigBlock = `
-    <div style="margin-bottom:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:250px; min-height:40px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="margin-bottom:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:200px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
-      <div style="font-size:10px; margin-top:4px;">(_________________) ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
+      <div style="font-size:9px; margin-top:3px;">(_________________) ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
     </div>`
 
   const punish5Label = row.step3.punish5
@@ -1791,17 +1834,22 @@ const buildPrintHTML = (row) => {
       <div style="font-size:9.5px;color:#333;padding-left:4px;">ຈຶ່ງແຈ້ງປະໂຫຍດດ້ວຍຕົນເອງ ແລະ ໃຫ້ທ່ານຮັບຊາບ ແລະ ຄຳນຶງດ້ວຍຕົວທ່ານເອງ</div>
     </div>
     <div class="s2-right">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px; flex-wrap:wrap;">
         <span class="chk-lg">${neverPunish ? '✓' : ''}</span><span>ບໍ່ເຄີຍ</span>&nbsp;
         <span class="chk-lg">${hasPunish ? '✓' : ''}</span><span>ເຄີຍຖຶກໂທດທາງວິໄນ</span>
       </div>
+      ${historyDetail ? `
+      <div style="margin-top:8px; padding:6px 8px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; font-size:10px;">
+        <strong>ລາຍລະອຽດ:</strong> ${historyDetail}
+      </div>
+      ` : ''}
       <hr class="hr-thin">
-      <div style="font-size:10px;margin-top:4px;">
-        <div style="display:flex;align-items:flex-end;gap:6px;line-height:1;">
-          <span style="white-space:nowrap;line-height:1;min-width:70px;">ລົງຊື່ :</span>
+      <div style="font-size:9px;margin-top:3px;">
+        <div style="display:flex; align-items:flex-end; gap:5px; line-height:1;">
+          <span style="white-space:nowrap; line-height:1; min-width:60px;">ລົງຊື່:</span>
           ${hrSigBox}
         </div>
-        <div style="margin-top:2px;margin-left:calc(70px + 6px);width:150px;text-align:center;font-size:9.5px;line-height:1.15;word-break:break-word;">
+        <div style="margin-top:2px; margin-left:calc(60px + 5px); width:120px; text-align:center; font-size:8.5px; line-height:1.1; word-break:break-word;">
           (${hrName || '____________________'})
         </div>
       </div>
@@ -1836,22 +1884,22 @@ const buildPrintHTML = (row) => {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
       <div style="margin-bottom:6px;">${punisherSigBlock}</div>
-      <div style="margin-bottom:6px;">
-        <div style="display:flex;align-items:flex-end;gap:3px;">
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;align-items:flex-end;gap:2px;">
           <span style="white-space:nowrap;line-height:1;">ລົງຊື່</span>
-          <span style="border-bottom:1px solid #888;display:inline-flex;align-items:center;justify-content:center;width:90px;min-height:48px;flex-shrink:0;"></span>
-          <span style="white-space:nowrap;font-size:9.5px;line-height:1;">ວັນທີ ____/____/______</span>
+          <span style="border-bottom:1px solid #888;display:inline-flex;align-items:center;justify-content:center;width:70px;min-height:35px;flex-shrink:0;"></span>
+          <span style="white-space:nowrap;font-size:9px;line-height:1;">ວັນທີ ____/____/______</span>
         </div>
-        <div style="font-size:10px;margin-top:2px;">(${empName}) ພະນັກງານ (ຜູ້ຖືກລົງໂທດ)</div>
+        <div style="font-size:9px;margin-top:2px;">(${empName}) ພະນັກງານ (ຜູ້ຖືກລົງໂທດ)</div>
       </div>
-      <div style="margin-bottom:6px;">${docSigBlock(witness1Name, witness1Detail)}</div>
-      <div style="margin-bottom:6px;">
-        <div style="display:flex;align-items:flex-end;gap:3px;">
-          <span style="white-space:nowrap;line-height:1;min-width:28px;display:inline-block;">ລົງຊື່</span>
+      <div style="margin-bottom:4px;">${docSigBlock(witness1Name, witness1Detail)}</div>
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;align-items:flex-end;gap:2px;">
+          <span style="white-space:nowrap;line-height:1;min-width:25px;display:inline-block;">ລົງຊື່</span>
           ${hrSigBox}
-          <span style="white-space:nowrap;font-size:9.5px;line-height:1;">ວັນທີ ____/____/______</span>
+          <span style="white-space:nowrap;font-size:9px;line-height:1;">ວັນທີ ____/____/______</span>
         </div>
-        <div style="margin-top:2px;margin-left:calc(28px + 3px);width:150px;text-align:center;font-size:10px;line-height:1.15;word-break:break-word;">
+        <div style="margin-top:2px;margin-left:calc(25px + 2px);width:120px;text-align:center;font-size:9px;line-height:1.1;word-break:break-word;">
           <div>(${hrName || '____________________'})</div>
           <div>${hrResponsib}</div>
         </div>
@@ -2120,10 +2168,10 @@ const buildPrintHTML = (row) => {
 .page-discipline .suggest-code { font-weight:700; color:var(--primary-dark); min-width:90px; font-size:12px; background:#e0f2fe; padding:2px 7px; border-radius:5px; }
 .page-discipline .suggest-name { flex:1; font-weight:600; color:#1e293b; }
 .page-discipline .suggest-dept { font-size:11px; color:#64748b; white-space:nowrap; }
-.page-discipline .sig-preview-box { margin-top:8px; padding:10px 14px; background:#f0f9ff; border:1.5px solid var(--primary-border); border-radius:10px; font-size:12px; color:#1e293b; }
-.page-discipline .sig-preview-line { display:flex; align-items:center; gap:6px; font-weight:600; color:#374151; margin-bottom:4px; }
-.page-discipline .sig-preview-blank { display:inline-block; width:110px; border-bottom:1.5px solid #64748b; min-height:18px; }
-.page-discipline .sig-preview-label { font-size:11px; color:var(--primary-dark); font-weight:600; padding-left:2px; }
+.page-discipline .sig-preview-box { margin-top:6px; padding:6px 10px; background:#f0f9ff; border:1.5px solid var(--primary-border); border-radius:8px; font-size:11px; color:#1e293b; }
+.page-discipline .sig-preview-line { display:flex; align-items:center; gap:4px; font-weight:600; color:#374151; margin-bottom:3px; }
+.page-discipline .sig-preview-blank { display:inline-block; width:80px; border-bottom:1.5px solid #64748b; min-height:15px; }
+.page-discipline .sig-preview-label { font-size:10px; color:var(--primary-dark); font-weight:600; padding-left:2px; }
 .page-discipline .btn { padding:11px 22px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; font-family:'Noto Sans Lao','Noto Sans Thai',sans-serif; transition:all 0.2s; }
 .page-discipline .btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.12); }
 .page-discipline .btn:disabled { opacity:0.65; cursor:not-allowed; transform:none; }
