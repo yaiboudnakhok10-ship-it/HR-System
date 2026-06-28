@@ -386,7 +386,7 @@
                 <div v-if="step3.punishGroup">
                   <strong>ประเภทเอกสาร:</strong>
                   <span :style="step3.punishGroup==='verbal' ? 'color:#c2410c;font-weight:700;' : 'color:#1d4ed8;font-weight:700;'">
-                    {{ step3.punishGroup === 'verbal' ? 'ໜັງສືຕັກເຕືອນດ້ວຍວາຈາ' : 'ໜັງສືຕັກເຕືອນດ້ວຍວິໄນ' }}
+                    {{ step3.punishGroup === 'verbal' ? 'ໜັງສືຕັກເຕືອນດ້ວຍວາຈາ' : 'ໜັງສືເຕືອນທາງວິໄນ' }}
                   </span>
                 </div>
                 <div v-if="emp.name"><strong>ผู้กระทำความผิด:</strong> {{ emp.name }}</div>
@@ -909,7 +909,7 @@ const getPrintHTML = (itemData = null) => {
   const punish5Text    = targetStep3.punish5Text    || ''
 
   const isVerbal = targetStep3.punishGroup === 'verbal'
-  const docTitle = isVerbal ? 'ໜັງສືຕັກເຕືອນດ້ວຍວາຈາ' : 'ໜັງສືຕັກເຕືອນດ້ວຍວິໄນ'
+  const docTitle = isVerbal ? 'ໜັງສືຕັກເຕືອນດ້ວຍວາຈາ' : 'ໜັງສືເຕືອນທາງວິໄນ'
 
   const chk = (v) => v
     ? `<span style="width:11px;height:11px;border:1.5px solid #555;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;">✓</span>`

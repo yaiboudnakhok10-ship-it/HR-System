@@ -28,7 +28,7 @@
             <select v-model="typeFilter" class="filter-select">
               <option value="all">ใบเตือนทั้งหมด</option>
               <option value="verbal">ໜັງສືຕັກເຕືອນດ້ວຍວາຈາ</option>
-              <option value="written">ໜັງສືຕັກເຕືອນດ້ວຍວິໄນ</option>
+              <option value="written">ໜັງສືເຕືອນທາງວິໄນ</option>
             </select>
           </div>
 
@@ -123,7 +123,7 @@
                     <i class="fa fa-comment-dots"></i> ໜັງສືຕັກເຕືອນດ້ວຍວາຈາ
                   </span>
                   <span v-if="c.punish_written1 || c.punish_written2 || c.punish_written3 || c.punish_other" class="badge-type written">
-                    <i class="fa fa-gavel"></i> ໜັງສືຕັກເຕືອນດ້ວຍວິໄນ
+                    <i class="fa fa-gavel"></i> ໜັງສືເຕືອນທາງວິໄນ
                   </span>
                   <span v-if="!c.punish_verbal && !(c.punish_written1 || c.punish_written2 || c.punish_written3 || c.punish_other)" class="null-dash">—</span>
                 </div>
@@ -357,7 +357,7 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
   const punish5Text = c.punish_other_text || ''
 
   const isVerbal = !!(c.punish_verbal)
-  const docTitle = isVerbal ? 'ໜັງສືຕັກເຕືອນດ້ວຍວາຈາ' : 'ໜັງສືຕັກເຕືອນດ້ວຍວິໄນ'
+  const docTitle = isVerbal ? 'ໜັງສືຕັກເຕືອນດ້ວຍວາຈາ' : 'ໜັງສືເຕືອນທາງວິໄນ'
 
   const chk = (v) => v
     ? `<span style="width:11px;height:11px;border:1.5px solid #555;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;">✓</span>`

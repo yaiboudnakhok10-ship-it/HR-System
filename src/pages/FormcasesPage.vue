@@ -815,7 +815,7 @@ const emp = ref({
 const caseType = ref('')
 const caseTypeOptions = [
   { value: 'ຈອດແຊ',     label: 'ຈອດແຊ (จอดแซ)' },
-  { value: 'ອູປະຕຶເຫດ', label: 'ອູປະຕຶເຫດ (อุบัติเหตุ)' },
+  { value: 'ອຸປະຕິເຫດ', label: 'ອຸປະຕິເຫດ (อุบัติเหตุ)' },
   { value: 'Excess',    label: 'Excess' },
   { value: 'ຂາດງານ',   label: 'ຂາດງານ (ขาดงาน)' },
 ]
