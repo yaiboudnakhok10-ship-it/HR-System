@@ -29,8 +29,15 @@
             </select>
           </div>
 
+          <div class="date-filter-box">
+            <i class="fa fa-calendar filter-icon"></i>
+            <input v-model="startDate" type="date" class="filter-input" placeholder="วันที่เริ่มต้น"/>
+            <span class="date-separator">ถึง</span>
+            <input v-model="endDate" type="date" class="filter-input" placeholder="วันที่สิ้นสุด"/>
+          </div>
+
           <transition name="fade">
-            <div class="result-chip" v-if="searchQuery || selectedCaseType">
+            <div class="result-chip" v-if="searchQuery || selectedCaseType || startDate || endDate">
               <i class="fa fa-filter-circle-xmark"></i>
               พบ <strong>{{ filtered.length }}</strong> รายการ
             </div>
@@ -38,6 +45,7 @@
         </div>
         <div class="toolbar-right">
           <div class="count-chip"><i class="fa fa-list"></i><span>ทั้งหมด <strong>{{ store.cases.length }}</strong> รายการ</span></div>
+          <button class="btn-gsheets" @click="exportToGoogleSheets"><i class="fa fa-file-excel"></i> Excel</button>
         </div>
       </div>
 
@@ -145,6 +153,7 @@ import { useSignatureStore } from '@/stores/Usesignaturestore'
 import { useDocumentTypeStore } from '@/stores/Usedocumenttypestore'
 import { useRegulationTypeStore } from '../stores/regulation_type.store'
 import { useRouter } from 'vue-router'
+import * as XLSX from 'xlsx'
 
 const store = useDisciplineListStore()
 const sigStore = useSignatureStore()
@@ -153,6 +162,8 @@ const regStore = useRegulationTypeStore()
 const router = useRouter()
 const searchQuery = ref('')
 const selectedCaseType = ref('')
+const startDate = ref('')
+const endDate = ref('')
 const deletingId = ref(null)
 const downloadingId = ref(null)
 
@@ -228,7 +239,11 @@ const caseTypeOptions = computed(() => {
 const filtered = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   const type = selectedCaseType.value
+  const start = startDate.value ? new Date(startDate.value) : null
+  const end = endDate.value ? new Date(endDate.value) : null
+
   return store.cases.filter(c => {
+    // Match search query
     const matchSearch = !q
       ? true
       : (c.employee_code || '').toLowerCase().includes(q) ||
@@ -237,8 +252,33 @@ const filtered = computed(() => {
         (c.incident_location || '').toLowerCase().includes(q) ||
         (c.subject || '').toLowerCase().includes(q) ||
         (c.witness_name || '').toLowerCase().includes(q)
+
+    // Match case type
     const matchType = !type || c.case_type === type
-    return matchSearch && matchType
+
+    // Match date range
+    let matchDate = true
+    if (c.created_at) {
+      const caseDate = new Date(c.created_at)
+      caseDate.setHours(0, 0, 0, 0)
+
+      if (start) {
+        const startDateObj = new Date(start)
+        startDateObj.setHours(0, 0, 0, 0)
+        if (caseDate < startDateObj) matchDate = false
+      }
+
+      if (end && matchDate) {
+        const endDateObj = new Date(end)
+        endDateObj.setHours(23, 59, 59, 999)
+        if (caseDate > endDateObj) matchDate = false
+      }
+    } else if (start || end) {
+      // If no created_at date and we have a filter, don't include
+      matchDate = false
+    }
+
+    return matchSearch && matchType && matchDate
   })
 })
 
@@ -867,6 +907,97 @@ const downloadPDF = async (c) => {
     downloadingId.value = null
   }
 }
+
+// ==================== Export to Excel ====================
+const exportToGoogleSheets = () => {
+  if (filtered.value.length === 0) {
+    alert('ไม่มีข้อมูลให้ดาวน์โหลด')
+    return
+  }
+
+  // Define ALL headers (all columns from the database)
+  const headers = [
+    'ลำดับ', 'ID', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'วันที่เกิดเหตุ',
+    'ประเภทเหตุการณ์', 'สถานที่เกิดเหตุ', 'รหัสพยาน', 'ชื่อพยาน',
+    'มูลค่าความเสียหาย', 'เรื่อง', 'รายละเอียด', 'ผู้สอบสวน',
+    'ประเภทความเสียหาย', 'จำนวนเงิน (บาท)', 'สกุลเงิน', 'จำนวนเงิน (กีบตรง)',
+    'เปอร์เซ็นต์', 'จำนวนเงินหลังหักเปอร์เซ็นต์', 'อัตราแลกกีบ',
+    'ยอดรวม (กีบ)', 'งวดชำระ', 'วันชำระ', 'มีการกระทำความผิดก่อนหรือไม่',
+    'ประวัติการลงโทษ', 'รายละเอียดประวัติ', 'ชื่อ HR', 'รูปภาพ HR',
+    'หน้าที่ HR', 'ID ประเภทกฎระเบียบ', 'ชื่อประเภทกฎระเบียบ', 'รายการกฎระเบียบ',
+    'ประเภทการลงโทษ', 'ข้อความการลงโทษอื่นๆ', 'ชื่อพยาน 1', 'รายละเอียดพยาน 1',
+    'ชื่อพยาน 2', 'รายละเอียดพยาน 2', 'ประธานกรรมการ', 'รองประธานกรรมการ',
+    'กรรมการ 1', 'กรรมการ 2', 'กรรมการ 3', 'เลขานุการกรรมการ',
+    'ที่อยู่', 'เลขบัตรประจำตัว', 'ยอดความเสียหายทั้งหมด', 'จำนวนเงินหัก',
+    'ผู้อนุมัติ HR', 'ชื่อผู้อนุมัติ HR', 'ผู้สร้าง', 'วันที่สร้าง', 'วันที่อัปเดต'
+  ]
+
+  const rows = filtered.value.map((item, index) => [
+    index + 1,
+    item.id || '',
+    item.employee_code || '',
+    item.employee_name || '',
+    item.position || '',
+    formatDateDMY(item.incident_date) || '',
+    item.case_type || '',
+    item.incident_location || '',
+    item.witness_code || '',
+    item.witness_name || '',
+    item.damage_value || '',
+    item.subject || '',
+    item.detail || '',
+    item.investigator || '',
+    Array.isArray(item.damage_types) ? item.damage_types.join(', ') : '',
+    item.amount_baht || '',
+    item.currency_type || '',
+    item.amount_kip_direct || '',
+    item.percent || '',
+    item.amount_after_percent || '',
+    item.rate_kip || '',
+    item.total_kip || '',
+    item.installments || '',
+    formatDateDMY(item.pay_date) || '',
+    item.has_violation ? 'มี' : 'ไม่มี',
+    item.history_type === 'never' ? 'ไม่เคย' : 'เคยถูกโทษ',
+    item.history_detail || '',
+    item.hr_name || '',
+    item.hr_image || '',
+    item.hr_responsibility || '',
+    item.regulation_type_id || '',
+    item.regulation_type_name || '',
+    Array.isArray(item.regulation_list) ? item.regulation_list.map(r => r.name || r).join(', ') : '',
+    Array.isArray(item.punish_types) ? item.punish_types.join(', ') : '',
+    item.punish_other_text || '',
+    item.witness1_name || '',
+    item.witness1_detail || '',
+    item.witness2_name || '',
+    item.witness2_detail || '',
+    item.commission_chairman || '',
+    item.commission_vice_chairman || '',
+    item.commission_committee1 || '',
+    item.commission_committee2 || '',
+    item.commission_committee3 || '',
+    item.commission_secretary || '',
+    item.address || '',
+    item.id_card || '',
+    item.total_damage || '',
+    item.deduct_amount || '',
+    item.hr_approver || '',
+    item.hr_approver_name || '',
+    item.created_by || '',
+    formatDate(item.created_at) || '',
+    formatDate(item.updated_at) || ''
+  ])
+
+  // Create worksheet and workbook
+  const worksheetData = [headers, ...rows]
+  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'ประวัติการลงโทษ')
+
+  // Download Excel file
+  XLSX.writeFile(workbook, 'ประวัติการลงโทษทางวินัย.xlsx')
+}
 </script>
 
 <style scoped>
@@ -892,6 +1023,10 @@ const downloadPDF = async (c) => {
 .filter-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#64748b;font-size:12px;pointer-events:none;}
 .filter-select{width:100%;padding:8px 10px 8px 30px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;font-weight:600;background:#fff;color:#1e293b;outline:none;transition:all 0.2s;appearance:none;background-image:linear-gradient(45deg,transparent 50%,#64748b 50%),linear-gradient(135deg,#64748b 50%,transparent 50%);background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
 .filter-select:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,0.12);}
+.date-filter-box{position:relative;display:flex;align-items:center;gap:8px;padding:8px 10px 8px 30px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;}
+.date-filter-box .filter-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#64748b;font-size:12px;pointer-events:none;}
+.filter-input{border:none;outline:none;background:transparent;font-size:12px;font-weight:600;color:#1e293b;width:120px;}
+.date-separator{font-size:12px;font-weight:600;color:#64748b;}
 .result-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(25,118,210,0.08);border:1px solid rgba(25,118,210,0.18);border-radius:20px;font-size:12px;font-weight:600;color:#0ea5e9;white-space:nowrap;}
 .count-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;font-size:12px;font-weight:600;color:#64748b;white-space:nowrap;}
 .table-wrapper{overflow-x:auto;}
@@ -930,6 +1065,9 @@ const downloadPDF = async (c) => {
 .btn-delete{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:7px;color:#ef4444;font-size:12px;cursor:pointer;transition:all 0.15s;flex-shrink:0;}
 .btn-delete:hover:not(:disabled){background:rgba(239,68,68,0.18);transform:translateY(-1px);}
 .btn-delete:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-gsheets{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);border-radius:7px;color:#047857;font-size:11.5px;font-weight:700;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.btn-gsheets:hover{background:rgba(16,185,129,0.22);transform:translateY(-1px);}
+.btn-gsheets i{font-size:12px;}
 .state-cell{padding:0 !important;}
 .state-content{display:flex;flex-direction:column;align-items:center;gap:10px;padding:52px 24px;color:#64748b;font-size:13px;font-weight:600;}
 .empty-icon-wrap{width:52px;height:52px;border-radius:50%;background:#f8fafc;border:2px dashed #e2e8f0;display:flex;align-items:center;justify-content:center;}
@@ -954,6 +1092,9 @@ const downloadPDF = async (c) => {
 .app-root.dark .search-input{background:#2d3748;border-color:#4b5563;color:#e5e7eb;}
 .app-root.dark .search-input::placeholder{color:#9ca3af;}
 .app-root.dark .filter-select{background:#2d3748;border-color:#4b5563;color:#e5e7eb;}
+.app-root.dark .date-filter-box{background:#2d3748;border-color:#4b5563;}
+.app-root.dark .filter-input{color:#e5e7eb;}
+.app-root.dark .date-separator{color:#9ca3af;}
 .app-root.dark .empty-icon-wrap{background:#2d3748;border-color:#4b5563;}
 .app-root.dark .empty-icon-wrap i{color:#6b7280;}
 .app-root.dark .empty-title{color:#d1d5db;}

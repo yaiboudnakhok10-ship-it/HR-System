@@ -32,8 +32,16 @@
             </select>
           </div>
 
+          <!-- ✅ เพิ่ม Filter ช่วงวันที่ -->
+          <div class="date-filter-box">
+            <i class="fa fa-calendar filter-icon"></i>
+            <input v-model="startDate" type="date" class="filter-input" placeholder="วันที่เริ่มต้น" />
+            <span class="date-separator">ถึง</span>
+            <input v-model="endDate" type="date" class="filter-input" placeholder="วันที่สิ้นสุด" />
+          </div>
+
           <transition name="fade">
-            <div class="result-chip" v-if="searchQuery || typeFilter !== 'all'">
+            <div class="result-chip" v-if="searchQuery || typeFilter !== 'all' || startDate || endDate">
               <i class="fa fa-filter-circle-xmark"></i> พบ <strong>{{ filtered.length }}</strong> รายการ
             </div>
           </transition>
@@ -43,6 +51,9 @@
             <i class="fa fa-list"></i>
             <span>ทั้งหมด <strong>{{ store.cases.length }}</strong> รายการ</span>
           </div>
+          <button class="btn-excel" @click="exportToExcel">
+            <i class="fa fa-file-excel"></i> Excel
+          </button>
         </div>
       </div>
 
@@ -172,11 +183,14 @@
 import { useVerbalWarningListStore } from '../stores/verbal_warning_list.store'
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import * as XLSX from 'xlsx'
 
 const store = useVerbalWarningListStore()
 const router = useRouter()
 const searchQuery = ref('')
-const typeFilter = ref('all') 
+const typeFilter = ref('all')
+const startDate = ref('')
+const endDate = ref('')
 const deletingId = ref(null)
 const downloadingId = ref(null)
 
@@ -230,6 +244,32 @@ const filtered = computed(() => {
     list = list.filter(c => c.punish_verbal)
   } else if (typeFilter.value === 'written') {
     list = list.filter(c => c.punish_written1 || c.punish_written2 || c.punish_written3 || c.punish_other)
+  }
+
+  // ✅ กรองตามช่วงวันที่
+  const start = startDate.value ? new Date(startDate.value) : null
+  const end = endDate.value ? new Date(endDate.value) : null
+
+  if (start || end) {
+    list = list.filter(c => {
+      if (!c.created_at) return false
+      const caseDate = new Date(c.created_at)
+      caseDate.setHours(0, 0, 0, 0)
+
+      if (start) {
+        const startDateObj = new Date(start)
+        startDateObj.setHours(0, 0, 0, 0)
+        if (caseDate < startDateObj) return false
+      }
+
+      if (end) {
+        const endDateObj = new Date(end)
+        endDateObj.setHours(23, 59, 59, 999)
+        if (caseDate > endDateObj) return false
+      }
+
+      return true
+    })
   }
 
   // ✅ กรองตามคำค้นหา
@@ -630,6 +670,105 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
 </body></html>`
 }
 
+// ─── Export to Excel ───────────────────────────────────────────────
+const exportToExcel = () => {
+  if (filtered.value.length === 0) {
+    alert('ไม่มีข้อมูลให้ดาวน์โหลด')
+    return
+  }
+
+  // ✅ ตรวจสอบว่า detail เป็น JSON หรือไม่
+  const parseDetail = (c) => {
+    let parsed = { text: '', reg_type: '', reg_list: [], history_detail: '' }
+    try {
+      if (c.detail && (c.detail.startsWith('{') || c.detail.startsWith('['))) {
+        parsed = JSON.parse(c.detail)
+      } else {
+        parsed.text = c.detail || ''
+      }
+    } catch {
+      parsed.text = c.detail || ''
+    }
+    return parsed
+  }
+
+  const headers = [
+    'ลำดับ', 'ID', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'วันที่เกิดเหตุ',
+    'สถานที่เกิดเหตุ', 'เรื่อง', 'รายละเอียด', 'รหัสพยาน', 'ชื่อพยาน',
+    'มูลค่าความเสียหาย', 'ความเสียหายต่อบุคคล', 'ความเสียหายต่อทรัพย์สิน',
+    'ความเสียหายอื่นๆ', 'มีการกระทำความผิดก่อนหรือไม่', 'ประวัติการลงโทษ',
+    'รายละเอียดประวัติ', 'ชื่อ HR', 'หน้าที่ HR', 'รายการกฎระเบียบ',
+    'ตักเตือนด้วยวาจา', 'ตักเตือนเป็นหนังสือ (ครั้งที่ 1)', 'ตักเตือนเป็นหนังสือ (ครั้งที่ 2)',
+    'ตักเตือนเป็นหนังสือ (ครั้งที่ 3)', 'อื่นๆ', 'ข้อความอื่นๆ',
+    'ชื่อพยาน 1', 'รายละเอียดพยาน 1', 'ชื่อพยาน 2', 'รายละเอียดพยาน 2',
+    'ประธานกรรมการ', 'รองประธานกรรมการ', 'กรรมการ 1', 'กรรมการ 2',
+    'กรรมการ 3', 'เลขานุการกรรมการ', 'ที่อยู่', 'เลขบัตรประจำตัว',
+    'ยอดความเสียหายทั้งหมด', 'จำนวนเงินหัก', 'ผู้อนุมัติ HR', 'ชื่อผู้อนุมัติ HR',
+    'ผู้สร้าง', 'วันที่สร้าง', 'วันที่อัปเดต'
+  ]
+
+  const rows = filtered.value.map((c, index) => {
+    const parsed = parseDetail(c)
+    return [
+      index + 1,
+      c.id || '',
+      c.employee_code || '',
+      c.employee_name || '',
+      c.position || '',
+      formatDateDMY(c.incident_date) || '',
+      c.incident_location || '',
+      c.subject || '',
+      parsed.text || '',
+      c.witness_code || '',
+      c.witness_name || '',
+      c.damage_value || '',
+      c.damage_personal ? 'มี' : 'ไม่มี',
+      c.damage_asset ? 'มี' : 'ไม่มี',
+      c.damage_other ? 'มี' : 'ไม่มี',
+      c.has_violation ? 'มี' : 'ไม่มี',
+      c.history_type === 'never' ? 'ไม่เคย' : 'เคยถูกโทษ',
+      c.history_detail || parsed.history_detail || '',
+      c.hr_name || '',
+      c.hr_responsibility || '',
+      Array.isArray(parsed.reg_list) ? parsed.reg_list.map(r => r.name || r).join(', ') : '',
+      c.punish_verbal ? 'มี' : 'ไม่มี',
+      c.punish_written1 ? 'มี' : 'ไม่มี',
+      c.punish_written2 ? 'มี' : 'ไม่มี',
+      c.punish_written3 ? 'มี' : 'ไม่มี',
+      c.punish_other ? 'มี' : 'ไม่มี',
+      c.punish_other_text || '',
+      c.witness1_name || '',
+      c.witness1_detail || '',
+      c.witness2_name || '',
+      c.witness2_detail || '',
+      c.commission_chairman || '',
+      c.commission_vice_chairman || '',
+      c.commission_committee1 || '',
+      c.commission_committee2 || '',
+      c.commission_committee3 || '',
+      c.commission_secretary || '',
+      c.address || '',
+      c.id_card || '',
+      c.total_damage || '',
+      c.deduct_amount || '',
+      c.hr_approver || '',
+      c.hr_approver_name || '',
+      c.created_by || '',
+      formatDate(c.created_at) || '',
+      formatDate(c.updated_at) || ''
+    ]
+  })
+
+  // สร้าง worksheet และ workbook
+  const worksheetData = [headers, ...rows]
+  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'รายการใบเตือน')
+
+  // ดาวน์โหลด Excel file
+  XLSX.writeFile(workbook, 'รายการใบเตือนทั้งหมด.xlsx')
+}
+
 // ─── Download PDF (แบบ 1 ใบต่อหน้า A4 โดยใช้ html2canvas + jspdf) ──────────
 const downloadPDF = async (c) => {
   downloadingId.value = c.id
@@ -720,6 +859,67 @@ const downloadPDF = async (c) => {
   padding: 8px 12px;
   border: 1.5px solid #e2e8f0;border-radius: 8px;font-size: 12.5px;font-family: inherit;font-weight: 600;background: #fff;color: #1e293b;outline: none;cursor: pointer;transition: all 0.2s;appearance: none;background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");background-repeat: no-repeat;background-position: right 10px center;background-size: 14px;padding-right: 32px;}
 .filter-select:focus {border-color: #0ea5e9;box-shadow: 0 0 0 3px rgba(14,165,233,0.12);}
+
+/* ✅ สไตล์ Date Filter */
+.date-filter-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 30px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  margin-left: 8px;
+}
+.date-filter-box .filter-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 12px;
+  pointer-events: none;
+}
+.filter-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  width: 120px;
+}
+.date-separator {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* ✅ สไตล์ Excel Button */
+.btn-excel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 7px;
+  color: #047857;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-excel:hover {
+  background: rgba(16, 185, 129, 0.22);
+  transform: translateY(-1px);
+}
+.btn-excel i {
+  font-size: 12px;
+}
+
 .result-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(25,118,210,0.08);border:1px solid rgba(25,118,210,0.18);border-radius:20px;font-size:12px;font-weight:600;color:#0ea5e9;white-space:nowrap;}
 .count-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;font-size:12px;font-weight:600;color:#64748b;white-space:nowrap;}
 .table-wrapper{overflow-x:auto;}
