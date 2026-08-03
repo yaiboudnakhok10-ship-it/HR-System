@@ -750,6 +750,7 @@ import { useDisciplineStore }   from '../stores/Usedisciplinestore'
 import { useRegulationTypeStore } from '../stores/regulation_type.store'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
+import { useTopicRecordsStore } from '@/stores/topic_records.store'
 import { supabase } from '@/services/supabase'
 
 const auth = useAuthStore()
@@ -767,6 +768,7 @@ const sigStore        = useSignatureStore()
 const docStore        = useDocumentTypeStore()
 const disciplineStore = useDisciplineStore()
 const regStore        = useRegulationTypeStore()
+const topicStore      = useTopicRecordsStore()
 
 const router = useRouter()
 const route  = useRoute()
@@ -779,6 +781,7 @@ onMounted(() => {
   sigStore.getSignatures()
   docStore.getDocuments()
   regStore.getRegulationTypes()
+  topicStore.getTopicRecords()
   try {
     if (localStorage.getItem('formcases_darkmode') === '1') applyDark(true)
   } catch { /* ignore storage errors */ }
@@ -813,12 +816,28 @@ const emp = ref({
 })
 
 const caseType = ref('')
-const caseTypeOptions = [
-  { value: 'ຈອດແຊ',     label: 'ຈອດແຊ (จอดแซ)' },
-  { value: 'ອຸປະຕິເຫດ', label: 'ອຸປະຕິເຫດ (อุบัติเหตุ)' },
-  { value: 'Excess',    label: 'Excess' },
-  { value: 'ຂາດງານ',   label: 'ຂາດງານ (ขาดงาน)' },
-]
+const caseTypeOptions = computed(() => {
+  const topics = (topicStore.topic_records || [])
+    .map(r => String(r.topic || '').trim())
+    .filter(Boolean)
+
+  const uniqueTopics = Array.from(new Set(topics))
+  if (uniqueTopics.length > 0) {
+    const current = String(caseType.value || '').trim()
+    const base = uniqueTopics.map(t => ({ value: t, label: t }))
+    if (current && !uniqueTopics.includes(current)) {
+      return [{ value: current, label: current }, ...base]
+    }
+    return base
+  }
+
+  return [
+    { value: 'ຈອດແຊ',     label: 'ຈອດແຊ (จอดแซ)' },
+    { value: 'ອຸປະຕິເຫດ', label: 'ອຸປະຕິເຫດ (อุบัติเหตุ)' },
+    { value: 'Excess',    label: 'Excess' },
+    { value: 'ຂາດງານ',   label: 'ຂາດງານ (ขาดงาน)' },
+  ]
+})
 
 const activeStep = ref(1)
 const isAdding   = ref(false)

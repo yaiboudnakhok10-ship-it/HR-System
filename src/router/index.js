@@ -14,6 +14,7 @@ import verbaWarningPage  from '../pages/verbal_warningPage.vue'
 import DashboardPage     from '../pages/dashboardPage.vue'
 import LoginPage         from '../pages/LoginPage.vue'
 import RegulationType    from '../pages/RegulationType.vue'
+import WarningTypePage   from '../pages/warning-typePage.vue'
 import AminViewLayout    from '../pages/Admin/Layouts/AminViewLayout.vue'
 import CompanyPage       from '../pages/Admin/view/CompanyWithdrawal.vue'
 import CompanyWithdrawalShow from '../pages/Admin/view/CompanyWithdrawalShow.vue'
@@ -108,6 +109,11 @@ const router = createRouter({
           path: 'regulation-type',
           name: 'RegulationType',
           component: RegulationType
+        },
+        {
+          path: 'warning-type',
+          name: 'WarningType',
+          component: WarningTypePage
         },
       ]
     },

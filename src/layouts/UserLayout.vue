@@ -26,6 +26,7 @@ const menuItems = [
       { name: 'ลายเช็นหัวหน้า', path: '/document',      icon: 'fa-list-check' },
       { name: 'ลายเช็นของ HR',   path: '/EmpSignatures', icon: 'fa-user-tie'  },
     { name: 'ประเภทกฎระเบียบ', path: '/regulation-type', icon: 'fa-scale-balanced' },
+      { name: 'ประเภทการเตือน', path: '/warning-type', icon: 'fa-triangle-exclamation' },
     ],
   },
   { name: 'ผู้ใช้งานระบบ', path: '/users', icon: 'fa-users' },
