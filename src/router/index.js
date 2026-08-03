@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'  // ← เปลี่ยน
+import { createRouter, createWebHistory } from 'vue-router'
 import employees         from '../pages/employeesPage.vue'
 import users             from '../pages/usersPage.vue'
 import Formemployees     from '../pages/FormemployeesPage.vue'
@@ -13,20 +13,11 @@ import formwarning       from '../pages/formwarningPage.vue'
 import verbaWarningPage  from '../pages/verbal_warningPage.vue'
 import DashboardPage     from '../pages/dashboardPage.vue'
 import LoginPage         from '../pages/LoginPage.vue'
-import RegulationType    from '../pages/RegulationType.vue'
-import AminViewLayout    from '../pages/Admin/Layouts/AminViewLayout.vue'
-import CompanyPage       from '../pages/Admin/view/CompanyWithdrawal.vue'
-import CompanyWithdrawalShow from '../pages/Admin/view/CompanyWithdrawalShow.vue'
-import WelfareRequestShow from '../pages/Admin/view/WelfareRequestShow.vue'
-import DashboardAdmin      from '../pages/Admin/view/DashboardView.vue'
-import AssetRequestPage  from '../pages/Admin/view/vue_asset_requests.vue'
-import WelfareRequestPage from '../pages/Admin/view/vue_welfare_requests.vue'
-import EmployeeSignaturePage from '../pages/Admin/view/vue_employee_signatures.vue'
-import SupervisorSignaturePage from '../pages/Admin/view/vue_supervisors.vue'
-import UserLayout        from '../layouts/UserLayout.vue'
+import RegulationType    from '../pages/RegulationType.vue'  // ✅ เพิ่มใหม่
+import WarningTypePage   from '../pages/warning-typePage.vue'
 
 const router = createRouter({
-  history: createWebHashHistory(),  // ← เปลี่ยน
+  history: createWebHistory(),
   routes: [
     {
       path: '/login',
@@ -34,139 +25,80 @@ const router = createRouter({
       component: LoginPage,
       meta: { public: true }
     },
-    // ── ระบบหลัก (ERHR) ─────────────────────────────────
     {
       path: '/',
-      component: UserLayout,
-      children: [
-        {
-          path: '',
-          name: 'Dashboard',
-          component: DashboardPage
-        },
-        {
-          path: 'employees',
-          name: 'employees',
-          component: employees
-        },
-        {
-          path: 'users',
-          name: 'users',
-          component: users
-        },
-        {
-          path: 'Formemp',
-          name: 'Formemp',
-          component: Formemployees
-        },
-        {
-          path: 'officers',
-          name: 'officers',
-          component: officersPage
-        },
-        {
-          path: 'document',
-          name: 'document',
-          component: documentPage
-        },
-        {
-          path: 'incident',
-          name: 'inciment',
-          component: incidentPage
-        },
-        {
-          path: 'warning-penalty',
-          name: 'penalty',
-          component: PenaltyPage
-        },
-        {
-          path: 'warning-history',
-          name: 'warning-history',
-          component: casesPage
-        },
-        {
-          path: 'EmpSignatures',
-          name: 'EmpSignatures',
-          component: EmployeeSignatures,
-        },
-        {
-          path: 'form-discipline',
-          name: 'FormcasesPage',
-          component: FormcasesPage
-        },
-        {
-          path: 'form-verbal-warning',
-          name: 'formwarning',
-          component: formwarning
-        },
-        {
-          path: 'verbaWarningPage',
-          name: 'verbaWarningPage',
-          component: verbaWarningPage
-        },
-        {
-          path: 'regulation-type',
-          name: 'RegulationType',
-          component: RegulationType
-        },
-      ]
+      name: 'Dashboard',
+      component: DashboardPage
     },
-    // ── ระบบเบิกทรัพย์สิน (Asset Management) ───────────────
     {
-      path: '/admin',
-      component: AminViewLayout,
-      children: [
-        {
-          path: 'asset-management',
-          name: 'AssetManagement',
-          component: DashboardAdmin
-        },
-        {
-          path: 'company-withdrawal',
-          name: 'CompanyWithdrawal',
-          component: CompanyPage
-        },
-        {
-          path: 'company-withdrawal-show',
-          name: 'CompanyWithdrawalShow',
-          component: CompanyWithdrawalShow
-        },
-        {
-          path: 'welfare-request',
-          name: 'WelfareRequest',
-          component: () => import('../pages/Admin/view/WelfareRequest.vue')
-        },
-        {
-          path: 'welfare-request-show',
-          name: 'WelfareRequestShow',
-          component: WelfareRequestShow
-        },
-        {
-          path: 'regulation-type-asset',
-          name: 'AdminRegulationAsset',
-          component: AssetRequestPage
-        },
-        {
-          path: 'regulation-type-welfare',
-          name: 'AdminRegulationWelfare',
-          component: WelfareRequestPage
-        },
-        {
-          path: 'form-verbal-warning',
-          name: 'AdminFormVerbalWarning',
-          component: formwarning
-        },
-        {
-          path: 'document',
-          name: 'AdminDocument',
-          component: SupervisorSignaturePage
-        },
-        {
-          path: 'EmpSignatures',
-          name: 'AdminEmpSignatures',
-          component: EmployeeSignaturePage
-        },
-      ]
+      path: '/employees',
+      name: 'employees',
+      component: employees
+    },
+    {
+      path: '/users',
+      name: 'users',
+      component: users
+    },
+    {
+      path: '/Formemp',
+      name: 'Formemp',
+      component: Formemployees
+    },
+    {
+      path: '/officers',
+      name: 'officers',
+      component: officersPage
+    },
+    {
+      path: '/document',
+      name: 'document',
+      component: documentPage
+    },
+    {
+      path: '/incident',
+      name: 'inciment',
+      component: incidentPage
+    },
+    {
+      path: '/warning-penalty',
+      name: 'penalty',
+      component: PenaltyPage
+    },
+    {
+      path: '/warning-history',
+      name: 'warning-history',
+      component: casesPage
+    },
+    {
+      path: '/EmpSignatures',
+      name: 'EmpSignatures',
+      component: EmployeeSignatures,
+    },
+    {
+      path: '/form-discipline',
+      name: 'FormcasesPage',
+      component: FormcasesPage
+    },
+    {
+      path: '/form-verbal-warning',
+      name: 'formwarning',
+      component: formwarning
+    },
+    {
+      path: '/verbaWarningPage',
+      name: 'verbaWarningPage',
+      component: verbaWarningPage
+    },
+    {
+      path: '/regulation-type',       // ✅ เพิ่มใหม่
+      name: 'RegulationType',
+      component: RegulationType
+    },
+    {
+      path: '/warning-type',
+      name: 'WarningTypePage',
+      component: WarningTypePage,
     },
     // ✅ catch-all → redirect ไป Dashboard
     {

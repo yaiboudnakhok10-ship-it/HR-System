@@ -7,5 +7,8 @@ const auth = useAuthStore()
 </script>
 
 <template>
-  <router-view />
+  <div>
+    <UserLayout v-if="auth.isLoggedIn" />
+    <LoginPage v-else />
+  </div>
 </template>

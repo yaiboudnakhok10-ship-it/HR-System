@@ -26,6 +26,7 @@ const menuItems = [
       { name: 'ลายเช็นหัวหน้า', path: '/document',      icon: 'fa-list-check' },
       { name: 'ลายเช็นของ HR',   path: '/EmpSignatures', icon: 'fa-user-tie'  },
     { name: 'ประเภทกฎระเบียบ', path: '/regulation-type', icon: 'fa-scale-balanced' },
+    { name: 'ประเภทการเตือน', path: '/warning-type', icon: 'fa-triangle-exclamation' },
     ],
   },
   { name: 'ผู้ใช้งานระบบ', path: '/users', icon: 'fa-users' },
@@ -209,20 +210,8 @@ function markAllRead() {
 
 // ── Profile dropdown ───────────────────────────────────────
 const profileOpen = ref(false)
-const switchSystemOpen = ref(false)
-
-function toggleProfile() { 
-  profileOpen.value = !profileOpen.value
-  notifOpen.value = false 
-  switchSystemOpen.value = false // Reset sub-menu when profile toggles
-}
-function closeProfile()  { profileOpen.value = false; switchSystemOpen.value = false }
-function toggleSwitchSystem() { switchSystemOpen.value = !switchSystemOpen.value }
-
-function navigatePR() {
-  // นำทางไปยังระบบเบิกทรัพย์สิน
-  router.push('/admin/asset-management')
-}
+function toggleProfile() { profileOpen.value = !profileOpen.value; notifOpen.value = false }
+function closeProfile()  { profileOpen.value = false }
 
 // ── Logout ─────────────────────────────────────────────────
 async function handleLogout() {
@@ -484,53 +473,21 @@ const vClickOutside = {
             <transition name="dropdown">
               <div class="tb-dropdown" v-if="profileOpen">
                 <div class="tb-dropdown-header">
-                  <div class="tb-avatar-container">
-                    <img src="/images/Thaidrill.jpeg" alt="Avatar" class="tb-avatar-img" />
-                  </div>
-                  <div class="tb-profile-details">
+                  <div class="tb-avatar tb-avatar-lg"><i class="fa fa-user"></i></div>
+                  <div>
                     <div class="tb-dd-name">{{ auth.session?.fullname || 'Admin User' }}</div>
-                    <div class="tb-dd-code">{{ auth.session?.employee_code || '-' }} ({{ auth.session?.username || '-' }})</div>
-                    <div class="tb-dd-badge-wrap">
-                      <span class="tb-dd-badge">
-                        <i class="fa fa-briefcase"></i> จนท.DMIS
-                      </span>
-                    </div>
-                    <div class="tb-dd-dept">( Project Coordination )</div>
+                    <div class="tb-dd-email">{{ auth.session?.username || '' }}</div>
                   </div>
                 </div>
                 <div class="tb-dropdown-divider"></div>
-                
-                <div class="tb-dd-menu">
-                  <button class="tb-dd-item" @click="openEditProfile">
-                    <div class="tb-dd-icon-wrap blue"><i class="fa fa-user-pen"></i></div>
-                    <span>แก้ไขข้อมูลโปรไฟล์</span>
-                  </button>
-
-                  <div class="tb-dd-group">
-                    <button class="tb-dd-item" @click="toggleSwitchSystem">
-                      <div class="tb-dd-icon-wrap purple"><i class="fa fa-right-left"></i></div>
-                      <span class="flex-1">สลับระบบ</span>
-                      <i class="fa fa-chevron-down tb-dd-arrow" :class="{ rotated: switchSystemOpen }"></i>
-                    </button>
-                    <transition name="submenu">
-                      <div class="tb-dd-sub" v-if="switchSystemOpen">
-                        <button class="tb-dd-item tb-dd-sub-item" @click="navigatePR">
-                          <div class="tb-dd-icon-wrap purple-light"><i class="fa fa-folder-open"></i></div>
-                          <span>ไประบบเบิกชับสินบริษัท</span>
-                        </button>
-                      </div>
-                    </transition>
-                  </div>
-
-                  <button class="tb-dd-item tb-dd-logout" @click="handleLogout">
-                    <div class="tb-dd-icon-wrap red"><i class="fa fa-right-from-bracket"></i></div>
-                    <span>ออกจากระบบ</span>
-                  </button>
-                </div>
-
-                <div class="tb-dd-footer">
-                  เข้าสู่ระบบเมื่อ: {{ formatNotifDate(new Date()) }}
-                </div>
+                <!-- ✅ เปลี่ยนไอคอนเป็น fa-user-pen และหัวข้อเป็น แก้ไขข้อมูลผู้ใช้ -->
+                <button class="tb-dd-item" @click="openEditProfile">
+                  <i class="fa fa-user-pen"></i><span>แก้ไขข้อมูลผู้ใช้</span>
+                </button>
+                <div class="tb-dropdown-divider"></div>
+                <button class="tb-dd-item tb-dd-logout" @click="handleLogout">
+                  <i class="fa fa-right-from-bracket"></i><span>ออกจากระบบ</span>
+                </button>
               </div>
             </transition>
           </div>
@@ -1037,128 +994,6 @@ nav { flex: 1; padding: 4px 8px; }
   justify-content: flex-end;
   z-index: 400;
 }
-.drawer {
-  width: 100%; max-width: 420px; height: 100%;
-  background: var(--tb-bg);
-  border-left: 1px solid var(--tb-border);
-  display: flex; flex-direction: column;
-}
-
-/* ── Custom Profile Dropdown Styles ── */
-.tb-avatar-container {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 3px solid var(--accent);
-  margin-bottom: 12px;
-  flex-shrink: 0;
-}
-.tb-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.tb-profile-details {
-  text-align: center;
-  width: 100%;
-}
-.tb-dd-name {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--tb-text);
-  margin-bottom: 2px;
-}
-.tb-dd-code {
-  font-size: 12px;
-  color: var(--tb-sub);
-  margin-bottom: 8px;
-}
-.tb-dd-badge-wrap {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 6px;
-}
-.tb-dd-badge {
-  background: rgba(25, 118, 210, 0.1);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.tb-dd-dept {
-  font-size: 11px;
-  color: var(--tb-sub);
-  font-weight: 600;
-}
-.tb-dropdown {
-  width: 280px !important;
-  padding: 0 !important;
-}
-.tb-dropdown-header {
-  flex-direction: column !important;
-  align-items: center !important;
-  padding: 24px 16px !important;
-}
-.tb-dd-menu {
-  padding: 8px;
-}
-.tb-dd-item {
-  padding: 10px 12px !important;
-  border-radius: 8px !important;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 12px !important;
-  font-size: 13.5px !important;
-}
-.tb-dd-icon-wrap {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-.tb-dd-icon-wrap.blue { background: rgba(25, 118, 210, 0.1); color: var(--accent); }
-.tb-dd-icon-wrap.purple { background: rgba(124, 58, 237, 0.1); color: #7c3aed; }
-.tb-dd-icon-wrap.purple-light { background: rgba(124, 58, 237, 0.05); color: #7c3aed; }
-.tb-dd-icon-wrap.red { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-.tb-dd-arrow {
-  font-size: 10px;
-  color: var(--tb-sub);
-  transition: transform 0.2s;
-}
-.tb-dd-arrow.rotated { transform: rotate(180deg); }
-
-.tb-dd-sub {
-  margin-left: 12px;
-  padding-left: 12px;
-  border-left: 1px solid var(--tb-border);
-  margin-top: -4px;
-  margin-bottom: 8px;
-}
-.tb-dd-sub-item {
-  margin-top: 4px;
-}
-
-.tb-dd-footer {
-  padding: 12px;
-  text-align: center;
-  font-size: 10px;
-  color: var(--tb-sub);
-  border-top: 1px solid var(--tb-border);
-  background: var(--tb-hover);
-}
-
-.flex-1 { flex: 1; }
-
 .drawer {
   width: 100%; max-width: 420px; height: 100%;
   background: var(--tb-bg);

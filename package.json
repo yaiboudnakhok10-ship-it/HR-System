@@ -10,8 +10,7 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/",
-    "deploy": "gh-pages -d dist"
+    "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.0",
@@ -21,8 +20,7 @@
     "pinia": "^3.0.4",
     "sweetalert2": "^11.26.24",
     "vue": "^3.5.30",
-    "vue-router": "^5.0.3",
-    "xlsx": "^0.18.5"
+    "vue-router": "^5.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -32,7 +30,6 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "~1.51.0",
     "eslint-plugin-vue": "~10.8.0",
-    "gh-pages": "^6.3.0",
     "globals": "^17.4.0",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.51.0",
