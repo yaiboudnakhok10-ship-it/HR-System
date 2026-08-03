@@ -21,6 +21,8 @@ export const useDisciplineStore = defineStore('discipline', () => {
     percent,
     history_type,
     currency_type,  // ✅ รับสกุลเงิน 'baht' | 'dollar'
+    amount_kip_direct, // ✅ รับ amountKipDirect
+    history_detail, // ✅ รับ historyDetail
   }) {
     loading.value = true
     error.value = null
@@ -63,6 +65,9 @@ export const useDisciplineStore = defineStore('discipline', () => {
             currency_type ||
             step1.currencyType ||
             'baht',
+          
+          // ✅ amount_kip_direct
+          amount_kip_direct: amount_kip_direct || null,
 
           // เปอร์เซ็นต์
           percent:
@@ -84,6 +89,7 @@ export const useDisciplineStore = defineStore('discipline', () => {
 
           has_violation: step2.hasViolation || false,
           history_type:  history_type || step2.historyType || 'never',
+          history_detail: history_detail || step2.historyDetail || null, // ✅ บันทึก history_detail
           hr_name:       step2.hrName || null,
           hr_image:      step2.hrImg  || null,
           hr_responsibility: step2.hrResponsibility || null,
@@ -144,6 +150,8 @@ export const useDisciplineStore = defineStore('discipline', () => {
     percent,
     history_type,
     currency_type,
+    amount_kip_direct, // ✅ รับ amountKipDirect
+    history_detail, // ✅ รับ historyDetail
   }) {
     loading.value = true
     error.value = null
@@ -179,6 +187,7 @@ export const useDisciplineStore = defineStore('discipline', () => {
           damage_types: damageTypes,
           amount_baht:  step1.amountBaht ? Number(step1.amountBaht) : null,
           currency_type: currency_type || step1.currencyType || 'baht',
+          amount_kip_direct: amount_kip_direct || null, // ✅ บันทึก amount_kip_direct
           percent: percent !== undefined && percent !== null && percent !== ''
               ? Number(percent)
               : (step1.percent !== undefined && step1.percent !== null && step1.percent !== '' ? Number(step1.percent) : null),
@@ -190,6 +199,7 @@ export const useDisciplineStore = defineStore('discipline', () => {
 
           has_violation: step2.hasViolation || false,
           history_type:  history_type || step2.historyType || 'never',
+          history_detail: history_detail || step2.historyDetail || null, // ✅ บันทึก history_detail
           hr_name:       step2.hrName || null,
           hr_image:      step2.hrImg  || null,
           hr_responsibility: step2.hrResponsibility || null,

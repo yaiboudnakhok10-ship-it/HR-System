@@ -29,8 +29,15 @@
             </select>
           </div>
 
+          <div class="date-filter-box">
+            <i class="fa fa-calendar filter-icon"></i>
+            <input v-model="startDate" type="date" class="filter-input" placeholder="วันที่เริ่มต้น"/>
+            <span class="date-separator">ถึง</span>
+            <input v-model="endDate" type="date" class="filter-input" placeholder="วันที่สิ้นสุด"/>
+          </div>
+
           <transition name="fade">
-            <div class="result-chip" v-if="searchQuery || selectedCaseType">
+            <div class="result-chip" v-if="searchQuery || selectedCaseType || startDate || endDate">
               <i class="fa fa-filter-circle-xmark"></i>
               พบ <strong>{{ filtered.length }}</strong> รายการ
             </div>
@@ -38,6 +45,7 @@
         </div>
         <div class="toolbar-right">
           <div class="count-chip"><i class="fa fa-list"></i><span>ทั้งหมด <strong>{{ store.cases.length }}</strong> รายการ</span></div>
+          <button class="btn-gsheets" @click="exportToGoogleSheets"><i class="fa fa-file-excel"></i> Excel</button>
         </div>
       </div>
 
@@ -145,6 +153,7 @@ import { useSignatureStore } from '@/stores/Usesignaturestore'
 import { useDocumentTypeStore } from '@/stores/Usedocumenttypestore'
 import { useRegulationTypeStore } from '../stores/regulation_type.store'
 import { useRouter } from 'vue-router'
+import * as XLSX from 'xlsx'
 
 const store = useDisciplineListStore()
 const sigStore = useSignatureStore()
@@ -153,6 +162,8 @@ const regStore = useRegulationTypeStore()
 const router = useRouter()
 const searchQuery = ref('')
 const selectedCaseType = ref('')
+const startDate = ref('')
+const endDate = ref('')
 const deletingId = ref(null)
 const downloadingId = ref(null)
 
@@ -228,7 +239,11 @@ const caseTypeOptions = computed(() => {
 const filtered = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   const type = selectedCaseType.value
+  const start = startDate.value ? new Date(startDate.value) : null
+  const end = endDate.value ? new Date(endDate.value) : null
+
   return store.cases.filter(c => {
+    // Match search query
     const matchSearch = !q
       ? true
       : (c.employee_code || '').toLowerCase().includes(q) ||
@@ -237,8 +252,33 @@ const filtered = computed(() => {
         (c.incident_location || '').toLowerCase().includes(q) ||
         (c.subject || '').toLowerCase().includes(q) ||
         (c.witness_name || '').toLowerCase().includes(q)
+
+    // Match case type
     const matchType = !type || c.case_type === type
-    return matchSearch && matchType
+
+    // Match date range
+    let matchDate = true
+    if (c.created_at) {
+      const caseDate = new Date(c.created_at)
+      caseDate.setHours(0, 0, 0, 0)
+
+      if (start) {
+        const startDateObj = new Date(start)
+        startDateObj.setHours(0, 0, 0, 0)
+        if (caseDate < startDateObj) matchDate = false
+      }
+
+      if (end && matchDate) {
+        const endDateObj = new Date(end)
+        endDateObj.setHours(23, 59, 59, 999)
+        if (caseDate > endDateObj) matchDate = false
+      }
+    } else if (start || end) {
+      // If no created_at date and we have a filter, don't include
+      matchDate = false
+    }
+
+    return matchSearch && matchType && matchDate
   })
 })
 
@@ -303,9 +343,12 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
   const investigator     = c.investigator        || '_________________'
   const address          = c.address             || ''
   const caseTypeVal      = c.case_type           || ''
+
+  // ✅ รองรับ kip mode เหมือนฟอร์ม
   const currType         = c.currency_type       || 'baht'
-  const currLabelPrint   = currType === 'dollar' ? 'ໂດລາ' : 'ບາດ'
-  const currSymbol       = currType === 'dollar' ? '$' : '฿'
+  const isKipMode        = currType === 'kip'
+  const currLabelPrint   = currType === 'dollar' ? 'ໂດລາ' : currType === 'kip' ? 'ກີບ' : 'ບາດ'
+  const currSymbol       = currType === 'dollar' ? '$'     : currType === 'kip' ? '₭'  : '฿'
 
   const types      = c.damage_types || []
   const hasPersonal = types.includes('personal')
@@ -313,12 +356,11 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
   const hasOther    = types.includes('other')
 
   const historyStr  = c.history_type || ''
-  const historyTypes = historyStr.split(',').map(s => s.trim())
-  const neverPunish  = historyTypes.includes('never')
-  const hasPunish    = historyTypes.includes('has')
+  const neverPunish  = historyStr === 'never'
+  const hasPunish    = historyStr === 'has'
   const hasViol      = !!(c.has_violation)
+  const historyDetail = c.history_detail || ''
 
-  // ✅ ดึงข้อมูลกฎระเบียบจาก DB (เหมือนกับฟอร์ม)
   const regulationList     = Array.isArray(c.regulation_list)     ? c.regulation_list     : []
   const regulationTypeName = c.regulation_type_name || ''
 
@@ -346,15 +388,26 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
   const witness2Name   = c.witness2_name   || '_________________'
   const witness2Detail = c.witness2_detail || 'ຮັກສາການຜູ້ຈັດການສ່ວນບໍລິຫານຊັບພະຍາກອນບຸກຄົນ'
 
-  const amountBahtNum          = c.amount_baht          ? Number(c.amount_baht)          : 0
-  const percentNum             = c.percent              ? Number(c.percent)              : 0
-  const amountAfterPercentNum  = c.amount_after_percent
+  // ✅ คำนวณตัวเลขรองรับ 3 โหมด: baht / dollar / kip
+  const amountBahtNum         = c.amount_baht ? Number(c.amount_baht) : 0
+  const percentNum            = c.percent     ? Number(c.percent)     : 0
+  const amountAfterPercentNum = c.amount_after_percent
     ? Number(c.amount_after_percent)
     : (percentNum > 0 ? amountBahtNum * (percentNum / 100) : amountBahtNum)
-  const rateKipNum             = c.rate_kip             ? Number(c.rate_kip)             : 0
-  const totalKipNum            = c.total_kip            ? Number(c.total_kip)            : (amountAfterPercentNum * rateKipNum)
-  const installmentsNum        = c.installments         ? Number(c.installments)         : 0
-  const perInstallmentKipNum   = (installmentsNum > 0 && totalKipNum > 0) ? Math.round(totalKipNum / installmentsNum) : 0
+  const rateKipNum            = c.rate_kip    ? Number(c.rate_kip)    : 0
+
+  // ✅ kip mode: ใช้ amount_kip_direct หรือ total_kip
+  const totalKipNum = isKipMode
+    ? (c.amount_kip_direct
+        ? Number(c.amount_kip_direct)
+        : (c.total_kip ? Number(c.total_kip) : 0))
+    : (c.total_kip
+        ? Number(c.total_kip)
+        : (amountAfterPercentNum * rateKipNum))
+
+  const installmentsNum      = c.installments ? Number(c.installments) : 0
+  const perInstallmentKipNum = (installmentsNum > 0 && totalKipNum > 0)
+    ? Math.round(totalKipNum / installmentsNum) : 0
 
   const amtBahtDisplay         = amountBahtNum.toLocaleString()
   const amtAfterPercentDisplay = amountAfterPercentNum.toLocaleString()
@@ -363,6 +416,11 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
   const perInstall             = perInstallmentKipNum > 0 ? perInstallmentKipNum.toLocaleString() : ''
   const payDateRaw             = c.pay_date || ''
   const payDateFormatted       = formatLaoDate(payDateRaw)
+
+  // ✅ จำนวนเงินต้นสำหรับแสดงในส่วนที่ 5
+  const displayAmountOrig = isKipMode
+    ? totalKipNum.toLocaleString()
+    : amtAfterPercentDisplay
 
   const chairman  = c.commission_chairman      || ''
   const viceChair = c.commission_vice_chairman || ''
@@ -381,26 +439,26 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     ${logo1b64 ? `<img src="${logo1b64}" style="height:22px;width:auto;object-fit:contain;">` : ''}
     ${logo2b64 ? `<img src="${logo2b64}" style="height:22px;width:auto;object-fit:contain;">` : ''}`
 
-  const hrSigBox = `<span style="border-bottom:1px solid #888;display:inline-flex;align-items:flex-end;justify-content:center;width:180px;min-height:68px;overflow:hidden;flex-shrink:0;">
-    ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:178px;max-height:66px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
+  const hrSigBox = `<span style="border-bottom:1px solid #888;display:inline-flex;align-items:flex-end;justify-content:center;width:120px;min-height:50px;overflow:hidden;flex-shrink:0;">
+    ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:118px;max-height:48px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
   </span>`
 
   const docSigBlock = (name, detail) => `
-    <div style="margin-bottom:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:220px; min-height:40px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="margin-bottom:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:180px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
-      <div style="font-size:10px; margin-top:4px;">(${name}) ${detail}</div>
+      <div style="font-size:9px; margin-top:3px;">(${name}) ${detail}</div>
     </div>`
 
   const punisherSigBlock = `
-    <div style="margin-bottom:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:250px; min-height:40px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="margin-bottom:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:200px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
-      <div style="font-size:10px; margin-top:4px;">(_________________) ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
+      <div style="font-size:9px; margin-top:3px;">(_________________) ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
     </div>`
 
   const punish5Label = punishTypes.includes('other')
@@ -413,7 +471,8 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
 
   const titleText = `ໜັງສືໃບເຕືອນ${caseTypeVal ? ` ${caseTypeVal}` : ''}`
 
-  const percentLine = (percentNum > 0 && amountBahtNum > 0)
+  // ✅ แสดง % line เฉพาะ baht/dollar mode เหมือนฟอร์ม
+  const percentLine = (!isKipMode && percentNum > 0 && amountBahtNum > 0)
     ? `<div style="margin-bottom:6px;line-height:1.8;">
          ມູນຄ່າຈຳນວນເງິນ ${amtBahtDisplay} ${currLabelPrint} x ຄູນ ${percentNum}% ເທົ່າກັບຈຳນວນເງິນ ${amtAfterPercentDisplay} ${currLabelPrint}
        </div>`
@@ -481,7 +540,8 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     margin-left:4px;border:none;background:transparent;
   }
   .currency-badge-baht   { background:transparent;color:#000;border:none; }
-  .currency-badge-dollar { background:transparent;color:#000;border:none; }`
+  .currency-badge-dollar { background:transparent;color:#000;border:none; }
+  .currency-badge-kip    { background:transparent;color:#000;border:none; }`
 
   const docHeader = `
   <div class="doc-header">
@@ -534,7 +594,7 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     </div>
     <div class="bottom-section">
       <div class="note-txt">ຂ້າພະເຈົ້າຂໍຮັບຮອງວ່າຂໍ້ມູນຂ້າງເທິງເປັນຄວາມຈິງທູກປະການ</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px 30px;margin-top:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 30px;margin-top:8px;">
         <div>${docSigBlock(investigator, 'ຜູ້ສອບສວນ/ຜູ້ບັງຄັບບັນຊາ')}</div>
         <div>${docSigBlock(empName, 'ພະນັກງານທີ່ກະທຳຄວາມຜິດ')}</div>
       </div>
@@ -557,13 +617,17 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
         <span class="chk-lg">${neverPunish ? '✓' : ''}</span><span>ບໍ່ເຄີຍ</span>&nbsp;
         <span class="chk-lg">${hasPunish ? '✓' : ''}</span><span>ເຄີຍຖຶກໂທດທາງວິໄນ</span>
       </div>
+      <div style="margin-top:5px;">
+        <div style="font-size:10px;font-weight:600;">ລາຍລະອຽດປະຫວັດ:</div>
+        <div style="font-size:9.5px;line-height:1.5;padding-left:4px;">${historyDetail || ''}</div>
+      </div>
       <hr class="hr-thin">
       <div style="font-size:10px;margin-top:4px;">
         <div style="display:flex;align-items:flex-end;gap:6px;line-height:1;">
           <span style="white-space:nowrap;line-height:1;min-width:70px;">ລົງຊື່ :</span>
           ${hrSigBox}
         </div>
-        <div style="margin-top:2px;margin-left:calc(70px + 6px);width:180px;text-align:center;font-size:9.5px;line-height:1.15;word-break:break-word;">
+        <div style="margin-top:2px;margin-left:calc(70px + 6px);width:120px;text-align:center;font-size:9.5px;line-height:1.15;word-break:break-word;">
           (${hrName || '____________________'})
         </div>
       </div>
@@ -597,23 +661,26 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
       ບໍລິສັດ ຈຶ່ງຂໍໃຫ້ທ່ານປັບປຸງຕົວ ຫາກທ່ານກະທຳຄວາມຜິດຊ້ຳ ອາດຖືກລົງໂທດຮ້າຍແຮງຂຶ້ນ ຮອດຂັ້ນເລີກຈ້າງໂດຍບໍ່ຈ່າຍຄ່າຊົດເຊີຍ
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
-      <div style="margin-bottom:6px;">${punisherSigBlock}</div>
-      <div style="margin-bottom:6px;">
-        <div style="display:flex;align-items:flex-end;gap:3px;">
+      <div style="margin-bottom:4px;">${punisherSigBlock}</div>
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;align-items:flex-end;gap:2px;">
           <span style="white-space:nowrap;line-height:1;">ລົງຊື່</span>
-          <span style="border-bottom:1px solid #888;display:inline-flex;align-items:center;justify-content:center;width:90px;min-height:48px;flex-shrink:0;"></span>
-          <span style="white-space:nowrap;font-size:9.5px;line-height:1;">ວັນທີ ____/____/______</span>
+          <span style="border-bottom:1px solid #888;display:inline-flex;align-items:center;justify-content:center;width:70px;min-height:35px;flex-shrink:0;"></span>
+          <span style="white-space:nowrap;font-size:9px;line-height:1;">ວັນທີ ____/____/______</span>
         </div>
-        <div style="font-size:10px;margin-top:2px;">(${empName}) ພະນັກງານ (ຜູ້ຖືກລົງໂທດ)</div>
+        <div style="font-size:9px;margin-top:2px;">(${empName}) ພະນັກງານ (ຜູ້ຖືກລົງໂທດ)</div>
       </div>
-      <div style="margin-bottom:6px;">${docSigBlock(witness1Name, witness1Detail)}</div>
-      <div style="margin-bottom:6px;">
-        <div style="display:flex;align-items:flex-end;gap:3px;">
-          <span style="white-space:nowrap;line-height:1;min-width:28px;display:inline-block;">ລົງຊື່</span>
+      <div style="margin-bottom:4px;">${docSigBlock(witness1Name, witness1Detail)}</div>
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;align-items:flex-end;gap:2px;">
+          <span style="white-space:nowrap;line-height:1;min-width:25px;display:inline-block;">ລົງຊື່</span>
           ${hrSigBox}
-          <span style="white-space:nowrap;font-size:9.5px;line-height:1;">ວັນທີ ____/____/______</span>
+          <span style="white-space:nowrap;font-size:9px;line-height:1;">ວັນທີ ____/____/______</span>
         </div>
-        <div style="font-size:10px;margin-top:2px;">(${hrName}) ${hrResponsib}</div>
+        <div style="margin-top:2px;margin-left:calc(25px + 2px);width:120px;text-align:center;font-size:9px;line-height:1.1;word-break:break-word;">
+          <div>(${hrName || '____________________'})</div>
+          <div>${hrResponsib}</div>
+        </div>
       </div>
       <div>${docSigBlock(witness2Name, witness2Detail)}</div>
       <div></div>
@@ -663,16 +730,16 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     <div style="width:38%;padding:3px 8px;background:#fff;font-weight:700;font-size:10.5px;">ຜູ້ອະນຸມັດ (ກຳມະການຜູ້ຈັດການ)</div>
   </div>
   <div style="display:flex;border:1px solid #999;border-top:none;margin-bottom:0;">
-    <div style="width:62%;padding:10px;border-right:1px solid #999;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:220px; min-height:35px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="width:62%;padding:8px;border-right:1px solid #999;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:180px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
     </div>
-    <div style="width:38%;padding:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:180px; min-height:35px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="width:38%;padding:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:150px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
     </div>
   </div>
@@ -697,12 +764,16 @@ const getPrintHTML = (c, logo1b64, logo2b64, hrImgB64) => {
     ${percentLine}
     <div style="margin-bottom:4px;line-height:1.8;">
       ມູນຄ່າຊັບສິນທີ່ເສຍຫາຍເບື້ອງຕົ້ນ ຄ່າ <span style="color:#000;">${caseTypeVal || 'Excess'}</span>
-      <span style="border-bottom:1px solid #888;display:inline-block;min-width:100px;font-weight:700;">&nbsp;${amtAfterPercentDisplay}&nbsp;</span>
-      <span class="currency-badge-print ${currType === 'dollar' ? 'currency-badge-dollar' : 'currency-badge-baht'}">${currLabelPrint} ${currSymbol}</span>
-      ຄິດໄລ່ເປັນເງິນກີບ
-      ${amtKip
-        ? `(<span style="border-bottom:1px solid #888;display:inline-block;min-width:90px;font-weight:700;">&nbsp;${amtKip} ກີບ&nbsp;</span>)`
-        : `(<span style="border-bottom:1px solid #888;display:inline-block;min-width:90px;">&nbsp;&nbsp;</span>)`}
+      <span style="border-bottom:1px solid #888;display:inline-block;min-width:100px;font-weight:700;">&nbsp;${displayAmountOrig}&nbsp;</span>
+      <span class="currency-badge-print currency-badge-${currType}">${currLabelPrint} ${currSymbol}</span>
+      ${isKipMode
+        ? ''
+        : `ຄິດໄລ່ເປັນເງິນກີບ
+          ${amtKip
+            ? `(<span style="border-bottom:1px solid #888;display:inline-block;min-width:90px;font-weight:700;">&nbsp;${amtKip} ກີບ&nbsp;</span>)`
+            : `(<span style="border-bottom:1px solid #888;display:inline-block;min-width:90px;">&nbsp;&nbsp;</span>)`
+          }`
+      }
     </div>
     <div style="margin-bottom:4px;line-height:1.8;">
       <strong>5.2)</strong> ຂ້າພະເຈົ້າຍິນຍອມໃຫ້ບໍລິສັດຕັດເງິນຕາມຂໍ້ 5.1) ຈຳນວນ
@@ -836,6 +907,97 @@ const downloadPDF = async (c) => {
     downloadingId.value = null
   }
 }
+
+// ==================== Export to Excel ====================
+const exportToGoogleSheets = () => {
+  if (filtered.value.length === 0) {
+    alert('ไม่มีข้อมูลให้ดาวน์โหลด')
+    return
+  }
+
+  // Define ALL headers (all columns from the database)
+  const headers = [
+    'ลำดับ', 'ID', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'วันที่เกิดเหตุ',
+    'ประเภทเหตุการณ์', 'สถานที่เกิดเหตุ', 'รหัสพยาน', 'ชื่อพยาน',
+    'มูลค่าความเสียหาย', 'เรื่อง', 'รายละเอียด', 'ผู้สอบสวน',
+    'ประเภทความเสียหาย', 'จำนวนเงิน (บาท)', 'สกุลเงิน', 'จำนวนเงิน (กีบตรง)',
+    'เปอร์เซ็นต์', 'จำนวนเงินหลังหักเปอร์เซ็นต์', 'อัตราแลกกีบ',
+    'ยอดรวม (กีบ)', 'งวดชำระ', 'วันชำระ', 'มีการกระทำความผิดก่อนหรือไม่',
+    'ประวัติการลงโทษ', 'รายละเอียดประวัติ', 'ชื่อ HR', 'รูปภาพ HR',
+    'หน้าที่ HR', 'ID ประเภทกฎระเบียบ', 'ชื่อประเภทกฎระเบียบ', 'รายการกฎระเบียบ',
+    'ประเภทการลงโทษ', 'ข้อความการลงโทษอื่นๆ', 'ชื่อพยาน 1', 'รายละเอียดพยาน 1',
+    'ชื่อพยาน 2', 'รายละเอียดพยาน 2', 'ประธานกรรมการ', 'รองประธานกรรมการ',
+    'กรรมการ 1', 'กรรมการ 2', 'กรรมการ 3', 'เลขานุการกรรมการ',
+    'ที่อยู่', 'เลขบัตรประจำตัว', 'ยอดความเสียหายทั้งหมด', 'จำนวนเงินหัก',
+    'ผู้อนุมัติ HR', 'ชื่อผู้อนุมัติ HR', 'ผู้สร้าง', 'วันที่สร้าง', 'วันที่อัปเดต'
+  ]
+
+  const rows = filtered.value.map((item, index) => [
+    index + 1,
+    item.id || '',
+    item.employee_code || '',
+    item.employee_name || '',
+    item.position || '',
+    formatDateDMY(item.incident_date) || '',
+    item.case_type || '',
+    item.incident_location || '',
+    item.witness_code || '',
+    item.witness_name || '',
+    item.damage_value || '',
+    item.subject || '',
+    item.detail || '',
+    item.investigator || '',
+    Array.isArray(item.damage_types) ? item.damage_types.join(', ') : '',
+    item.amount_baht || '',
+    item.currency_type || '',
+    item.amount_kip_direct || '',
+    item.percent || '',
+    item.amount_after_percent || '',
+    item.rate_kip || '',
+    item.total_kip || '',
+    item.installments || '',
+    formatDateDMY(item.pay_date) || '',
+    item.has_violation ? 'มี' : 'ไม่มี',
+    item.history_type === 'never' ? 'ไม่เคย' : 'เคยถูกโทษ',
+    item.history_detail || '',
+    item.hr_name || '',
+    item.hr_image || '',
+    item.hr_responsibility || '',
+    item.regulation_type_id || '',
+    item.regulation_type_name || '',
+    Array.isArray(item.regulation_list) ? item.regulation_list.map(r => r.name || r).join(', ') : '',
+    Array.isArray(item.punish_types) ? item.punish_types.join(', ') : '',
+    item.punish_other_text || '',
+    item.witness1_name || '',
+    item.witness1_detail || '',
+    item.witness2_name || '',
+    item.witness2_detail || '',
+    item.commission_chairman || '',
+    item.commission_vice_chairman || '',
+    item.commission_committee1 || '',
+    item.commission_committee2 || '',
+    item.commission_committee3 || '',
+    item.commission_secretary || '',
+    item.address || '',
+    item.id_card || '',
+    item.total_damage || '',
+    item.deduct_amount || '',
+    item.hr_approver || '',
+    item.hr_approver_name || '',
+    item.created_by || '',
+    formatDate(item.created_at) || '',
+    formatDate(item.updated_at) || ''
+  ])
+
+  // Create worksheet and workbook
+  const worksheetData = [headers, ...rows]
+  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'ประวัติการลงโทษ')
+
+  // Download Excel file
+  XLSX.writeFile(workbook, 'ประวัติการลงโทษทางวินัย.xlsx')
+}
 </script>
 
 <style scoped>
@@ -861,6 +1023,10 @@ const downloadPDF = async (c) => {
 .filter-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#64748b;font-size:12px;pointer-events:none;}
 .filter-select{width:100%;padding:8px 10px 8px 30px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;font-weight:600;background:#fff;color:#1e293b;outline:none;transition:all 0.2s;appearance:none;background-image:linear-gradient(45deg,transparent 50%,#64748b 50%),linear-gradient(135deg,#64748b 50%,transparent 50%);background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
 .filter-select:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,0.12);}
+.date-filter-box{position:relative;display:flex;align-items:center;gap:8px;padding:8px 10px 8px 30px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;}
+.date-filter-box .filter-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#64748b;font-size:12px;pointer-events:none;}
+.filter-input{border:none;outline:none;background:transparent;font-size:12px;font-weight:600;color:#1e293b;width:120px;}
+.date-separator{font-size:12px;font-weight:600;color:#64748b;}
 .result-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(25,118,210,0.08);border:1px solid rgba(25,118,210,0.18);border-radius:20px;font-size:12px;font-weight:600;color:#0ea5e9;white-space:nowrap;}
 .count-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;font-size:12px;font-weight:600;color:#64748b;white-space:nowrap;}
 .table-wrapper{overflow-x:auto;}
@@ -899,6 +1065,9 @@ const downloadPDF = async (c) => {
 .btn-delete{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:7px;color:#ef4444;font-size:12px;cursor:pointer;transition:all 0.15s;flex-shrink:0;}
 .btn-delete:hover:not(:disabled){background:rgba(239,68,68,0.18);transform:translateY(-1px);}
 .btn-delete:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-gsheets{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);border-radius:7px;color:#047857;font-size:11.5px;font-weight:700;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.btn-gsheets:hover{background:rgba(16,185,129,0.22);transform:translateY(-1px);}
+.btn-gsheets i{font-size:12px;}
 .state-cell{padding:0 !important;}
 .state-content{display:flex;flex-direction:column;align-items:center;gap:10px;padding:52px 24px;color:#64748b;font-size:13px;font-weight:600;}
 .empty-icon-wrap{width:52px;height:52px;border-radius:50%;background:#f8fafc;border:2px dashed #e2e8f0;display:flex;align-items:center;justify-content:center;}
@@ -912,71 +1081,6 @@ const downloadPDF = async (c) => {
 .fade-enter-active,.fade-leave-active{transition:opacity 0.2s,transform 0.2s;}
 .fade-enter-from,.fade-leave-to{opacity:0;transform:scale(0.95);}
 
-.edit-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:18px;z-index:999;}
-.edit-modal{width:min(1180px,100%);max-height:92vh;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(15,23,42,0.35);display:flex;flex-direction:column;overflow:hidden;}
-.edit-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid #e2e8f0;background:#f8fafc;}
-.edit-title{font-size:20px;font-weight:800;color:#0f172a;margin:0;}
-.edit-subtitle{font-size:12px;color:#64748b;margin:4px 0 0;}
-.edit-close{width:36px;height:36px;border:none;border-radius:10px;background:#e2e8f0;color:#334155;cursor:pointer;flex-shrink:0;}
-.edit-close:hover{background:#cbd5e1;}
-.edit-body{padding:18px 20px;overflow:auto;background:#f8fafc;display:flex;flex-direction:column;gap:14px;}
-.edit-footer{padding:16px 20px;border-top:1px solid #e2e8f0;background:#fff;display:flex;justify-content:flex-end;gap:10px;}
-.edit-section-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;}
-.edit-section-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:#0f172a;margin-bottom:14px;}
-.edit-section-title i{color:#0ea5e9;}
-.edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
-.edit-grid-two{grid-template-columns:repeat(2,minmax(0,1fr));}
-.form-group{display:flex;flex-direction:column;gap:6px;}
-.form-label{font-size:12px;font-weight:700;color:#334155;}
-.form-control{width:100%;padding:10px 12px;border:1.5px solid #dbe2ea;border-radius:10px;background:#fff;color:#0f172a;font-size:13px;font-family:inherit;outline:none;transition:border-color .2s, box-shadow .2s;}
-.form-control:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,0.12);}
-.edit-checkbox-group{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
-.cb-group{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#334155;}
-.cb-group input{margin-top:2px;}
-.cb-label{font-size:12.5px;color:#334155;font-weight:600;}
-.asset-calc-box{padding:14px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;display:flex;flex-direction:column;gap:12px;}
-.currency-select-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.currency-select-label{font-size:12px;font-weight:800;color:#334155;display:inline-flex;align-items:center;gap:6px;}
-.currency-option{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid #dbe2ea;border-radius:999px;background:#fff;font-size:12px;font-weight:700;color:#334155;cursor:pointer;}
-.currency-option.active{border-color:#0ea5e9;color:#0284c7;background:#eff6ff;}
-.currency-cb{pointer-events:none;}
-.currency-flag{font-size:14px;}
-.calc-grid-row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;}
-.calc-cell{display:flex;flex-direction:column;gap:6px;}
-.calc-cell-label{font-size:11.5px;font-weight:700;color:#475569;}
-.calc-input{font-size:13px;}
-.calc-result{background:#f1f5f9;}
-.calc-oper-cell{display:flex;align-items:center;justify-content:center;padding-bottom:10px;}
-.calc-oper-badge{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 12px;border-radius:10px;background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:800;white-space:nowrap;}
-.calc-oper-percent{background:#fef3c7;color:#b45309;}
-.calc-oper-div{background:#ede9fe;color:#6d28d9;}
-.calc-result-row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:end;}
-.calc-equal-box{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#ecfeff;border:1px solid #bae6fd;border-radius:12px;flex-wrap:wrap;}
-.calc-equal-label{font-size:12px;font-weight:700;color:#155e75;}
-.calc-equal-value{font-size:15px;font-weight:800;color:#0f766e;}
-.calc-equal-unit{font-size:12px;font-weight:700;color:#155e75;}
-.calc-date-field{min-width:240px;display:flex;flex-direction:column;gap:6px;}
-.regulation-list-box{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;}
-.regulation-list-item{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:#334155;}
-.reg-num{width:24px;height:24px;border-radius:999px;background:#dbeafe;color:#1d4ed8;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
-.reg-text{line-height:1.5;}
-.sig-preview-inline{display:flex;align-items:center;gap:10px;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:600;color:#334155;}
-.sig-preview-img{max-height:56px;border:1px solid #dbe2ea;border-radius:8px;background:#fff;padding:4px;}
-.preview-box{padding:12px;border:1px dashed #cbd5e1;border-radius:12px;background:#fff;color:#334155;display:flex;flex-direction:column;gap:8px;}
-.preview-green-box{margin-top:8px;padding:10px;background:#f0fdf4;border-radius:8px;border:1px solid #86efac;}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s;}
-.btn-success{background:#0ea5e9;color:#fff;}
-.btn-success:hover:not(:disabled){background:#0284c7;}
-.btn-gray{background:#e2e8f0;color:#334155;}
-.btn-gray:hover:not(:disabled){background:#cbd5e1;}
-.btn-sm{padding:9px 14px;font-size:12.5px;}
-
-@media (max-width: 900px){
-  .edit-grid,.edit-grid-two,.calc-grid-row{grid-template-columns:1fr;}
-  .calc-oper-cell{padding-bottom:0;justify-content:flex-start;}
-  .edit-modal{max-height:96vh;}
-}
-
 .app-root.dark .page-wrapper{background:#0f172a;color:#e5e7eb;}
 .app-root.dark .card{background:#1a1a2e;border-color:#374151;color:#e5e7eb;}
 .app-root.dark .card-toolbar{border-bottom-color:#374151;}
@@ -988,6 +1092,9 @@ const downloadPDF = async (c) => {
 .app-root.dark .search-input{background:#2d3748;border-color:#4b5563;color:#e5e7eb;}
 .app-root.dark .search-input::placeholder{color:#9ca3af;}
 .app-root.dark .filter-select{background:#2d3748;border-color:#4b5563;color:#e5e7eb;}
+.app-root.dark .date-filter-box{background:#2d3748;border-color:#4b5563;}
+.app-root.dark .filter-input{color:#e5e7eb;}
+.app-root.dark .date-separator{color:#9ca3af;}
 .app-root.dark .empty-icon-wrap{background:#2d3748;border-color:#4b5563;}
 .app-root.dark .empty-icon-wrap i{color:#6b7280;}
 .app-root.dark .empty-title{color:#d1d5db;}
@@ -996,18 +1103,4 @@ const downloadPDF = async (c) => {
 .app-root.dark .footer-info{color:#a0aec0;}
 .app-root.dark h1,.app-root.dark h2,.app-root.dark h3{color:#e5e7eb;}
 .app-root.dark p{color:#a0aec0;}
-.app-root.dark .edit-modal,.app-root.dark .edit-footer{background:#0f172a;color:#e5e7eb;}
-.app-root.dark .edit-header,.app-root.dark .edit-body{background:#111827;border-color:#374151;}
-.app-root.dark .edit-section-card,.app-root.dark .preview-box,.app-root.dark .asset-calc-box,.app-root.dark .regulation-list-box,.app-root.dark .sig-preview-inline{background:#1f2937;border-color:#374151;color:#e5e7eb;}
-.app-root.dark .edit-title,.app-root.dark .edit-section-title,.app-root.dark .form-label,.app-root.dark .cb-label{color:#e5e7eb;}
-.app-root.dark .edit-subtitle,.app-root.dark .calc-cell-label,.app-root.dark .currency-select-label{color:#cbd5e1;}
-.app-root.dark .form-control{background:#111827;border-color:#4b5563;color:#e5e7eb;}
-.app-root.dark .form-control:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.15);}
-.app-root.dark .currency-option{background:#111827;border-color:#4b5563;color:#e5e7eb;}
-.app-root.dark .currency-option.active{background:#082f49;border-color:#38bdf8;color:#bae6fd;}
-.app-root.dark .calc-result{background:#0f172a;}
-.app-root.dark .btn-gray{background:#334155;color:#e5e7eb;}
-.app-root.dark .btn-gray:hover:not(:disabled){background:#475569;}
-.app-root.dark .edit-close{background:#334155;color:#e5e7eb;}
-.app-root.dark .edit-close:hover{background:#475569;}
 </style>

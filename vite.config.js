@@ -6,6 +6,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/HR-System/',  // ← เพิ่มบรรทัดนี้
   plugins: [
     vue(),
     vueDevTools(),

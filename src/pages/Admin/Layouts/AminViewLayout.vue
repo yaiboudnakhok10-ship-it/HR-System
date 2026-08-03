@@ -16,19 +16,25 @@ const router = useRouter()
 const route  = useRoute()
 
 const menuItems = [
-  { name: 'Dashboard',           path: '/',                    icon: 'fa-chart-line' },
-  { name: 'ฟอร์มสร้างใบเตือนA',  path: '/form-discipline',     icon: 'fa-file-pen'  },
-  { name: 'ฟอร์มสร้างใบเตือนB',  path: '/form-verbal-warning', icon: 'fa-file-pen'  },
+  { name: 'Dashboard',           path: '/admin/asset-management', icon: 'fa-chart-pie' },
+  { name: 'ฟอร์มเบิกชับสินบริษัท',  path: '/admin/company-withdrawal',     icon: 'fa-truck-ramp-box'  },
+  { name: 'ฟอร์มเบิกสวัสดิการ',  path: '/admin/welfare-request', icon: 'fa-hand-holding-medical'  },
   {
-    name: 'ประเภทข้อมูล',
-    icon: 'fa-layer-group',
+    name: 'ประเภทลายเช็น',
+    icon: 'fa-signature',
     children: [
-      { name: 'ลายเช็นหัวหน้า', path: '/document',      icon: 'fa-list-check' },
-      { name: 'ลายเช็นของ HR',   path: '/EmpSignatures', icon: 'fa-user-tie'  },
-    { name: 'ประเภทกฎระเบียบ', path: '/regulation-type', icon: 'fa-scale-balanced' },
+      { name: 'ลายเช็นหัวหน้า', path: '/admin/document',      icon: 'fa-user-check' },
+      { name: 'ลายเช็นพนักงาน',   path: '/admin/EmpSignatures', icon: 'fa-id-card'  },
     ],
   },
-  { name: 'ผู้ใช้งานระบบ', path: '/users', icon: 'fa-users' },
+  {
+    name: 'ประเภทกหัวข้อ',
+    icon: 'fa-folder-tree',
+    children: [
+      { name: 'หัวข้อเบิกชับสินบริษัท', path: '/admin/regulation-type-asset', icon: 'fa-box-archive' },
+      { name: 'หัวข้อเบิกสวัสดิการ', path: '/admin/regulation-type-welfare', icon: 'fa-hospital-user' },
+    ],
+  }
 ]
 
 // ── Sidebar ────────────────────────────────────────────────
@@ -214,14 +220,14 @@ const switchSystemOpen = ref(false)
 function toggleProfile() { 
   profileOpen.value = !profileOpen.value
   notifOpen.value = false 
-  switchSystemOpen.value = false // Reset sub-menu when profile toggles
+  switchSystemOpen.value = false
 }
 function closeProfile()  { profileOpen.value = false; switchSystemOpen.value = false }
 function toggleSwitchSystem() { switchSystemOpen.value = !switchSystemOpen.value }
 
-function navigatePR() {
-  // นำทางไปยังระบบเบิกทรัพย์สิน
-  router.push('/admin/asset-management')
+function navigateBackToERHR() {
+  // นำทางกลับไปยังระบบใบเตือน
+  router.push('/')
 }
 
 // ── Logout ─────────────────────────────────────────────────
@@ -363,6 +369,10 @@ async function saveProfileChanges() {
 function navigate(path) {
   router.push(path)
   if (isMobile.value) closeMobileSidebar()
+  // ✅ ปิด dropdown/panel ต่างๆ เมื่อมีการเปลี่ยนหน้า
+  notifOpen.value = false
+  profileOpen.value = false
+  switchSystemOpen.value = false
 }
 function onResize() {
   isMobile.value = window.innerWidth <= 768
@@ -514,9 +524,9 @@ const vClickOutside = {
                     </button>
                     <transition name="submenu">
                       <div class="tb-dd-sub" v-if="switchSystemOpen">
-                        <button class="tb-dd-item tb-dd-sub-item" @click="navigatePR">
-                          <div class="tb-dd-icon-wrap purple-light"><i class="fa fa-folder-open"></i></div>
-                          <span>ไประบบเบิกชับสินบริษัท</span>
+                        <button class="tb-dd-item tb-dd-sub-item" @click="navigateBackToERHR">
+                          <div class="tb-dd-icon-wrap purple-light"><i class="fa fa-file-invoice"></i></div>
+                          <span>กลับไประบบใบเตือน</span>
                         </button>
                       </div>
                     </transition>
@@ -589,7 +599,7 @@ const vClickOutside = {
     <!-- ════ EDIT PROFILE DRAWER ════ -->
     <Teleport to="body">
       <transition name="slide-right">
-        <div v-if="editProfileOpen" class="drawer-overlay" @click.self="closeEditProfile">
+        <div v-if="editProfileOpen" class="profile-drawer-overlay" @click.self="closeEditProfile">
           <div class="drawer">
 
             <!-- Header -->
@@ -785,7 +795,7 @@ body { font-family: 'Noto Sans Lao', 'Nunito', 'Barlow', sans-serif; background:
 .app-root { display: flex; flex-direction: column; min-height: 100vh; }
 
 /* ── TOPBAR ── */
-.topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--tb-h); background: var(--tb-bg); border-bottom: 1px solid var(--tb-border); display: flex; align-items: center; z-index: 200; box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
+.topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--tb-h); background: var(--tb-bg); border-bottom: 1px solid var(--tb-border); display: flex; align-items: center; z-index: 1000; box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
 .topbar-brand { width: var(--sb-width); min-width: var(--sb-width); display: flex; align-items: center; gap: 11px; padding: 0 18px; height: 100%; border-right: 1px solid var(--tb-border); flex-shrink: 0; overflow: hidden; transition: width 0.28s, min-width 0.28s, border-color 0.3s; }
 .brand-logo { width: 36px; height: 36px; flex-shrink: 0; object-fit: contain; display: block; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.2; }
@@ -886,7 +896,7 @@ body { font-family: 'Noto Sans Lao', 'Nunito', 'Barlow', sans-serif; background:
 .layout { display: flex; flex: 1; margin-top: var(--tb-h); min-height: calc(100vh - var(--tb-h)); }
 
 /* ── SIDEBAR ── */
-.sidebar { width: var(--sb-width); min-width: var(--sb-width); background: var(--sb-bg); border-right: 1px solid var(--sb-border); position: fixed; top: var(--tb-h); bottom: 0; left: 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; z-index: 150; transition: width 0.28s ease, min-width 0.28s ease, left 0.3s ease, background 0.3s, border-color 0.3s; box-shadow: 2px 0 12px rgba(0,0,0,0.04); }
+.sidebar { width: var(--sb-width); min-width: var(--sb-width); background: var(--sb-bg); border-right: 1px solid var(--sb-border); position: fixed; top: var(--tb-h); bottom: 0; left: 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; z-index: 900; transition: width 0.28s ease, min-width 0.28s ease, left 0.3s ease, background 0.3s, border-color 0.3s; box-shadow: 2px 0 12px rgba(0,0,0,0.04); }
 .sidebar::-webkit-scrollbar { width: 3px; }
 .sidebar::-webkit-scrollbar-thumb { background: var(--sb-border); border-radius: 3px; }
 nav { flex: 1; padding: 4px 8px; }
@@ -915,7 +925,7 @@ nav { flex: 1; padding: 4px 8px; }
 
 .content-wrap { flex: 1; margin-left: var(--sb-width); min-height: calc(100vh - var(--tb-h)); display: flex; flex-direction: column; position: relative; overflow: hidden; transition: margin-left 0.28s ease; background: var(--content-bg); }
 .content-container { flex: 1; padding: 24px; min-height: calc(100vh - var(--tb-h)); }
-.mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 140; }
+.mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 850; }
 
 /* ── COLLAPSED ── */
 .sb-collapsed .sidebar       { width: 58px; min-width: 58px; }
@@ -947,15 +957,13 @@ nav { flex: 1; padding: 4px 8px; }
 .app-root.dark .nav-item:hover i { color: var(--sb-icon-hover) !important; }
 .app-root.dark .nav-item.active i { color: var(--sb-icon-active) !important; }
 .app-root.dark .nav-parent.has-active > i { color: var(--accent) !important; }
-.app-root.dark { background: #000000 !important; color: #f5f5f5 !important; }
-.app-root.dark body, .app-root.dark * { background-color: inherit !important; color: inherit !important; }
+.app-root.dark { background: #000000; color: #f5f5f5; }
+
 .app-root.dark .layout,
 .app-root.dark .content-wrap,
 .app-root.dark .content-container,
-.app-root.dark main { background: #000000 !important; color: #f5f5f5 !important; }
-.app-root.dark .nav-item i     { color: var(--sb-icon) !important; }
-.app-root.dark .nav-item:hover i { color: var(--sb-icon-hover) !important; }
-.app-root.dark .nav-item.active i { color: #ffffff !important; }
+.app-root.dark main { background: #000000; color: #f5f5f5; }
+
 .app-root.dark .notif-red i    { color: #ef4444 !important; }
 .app-root.dark .notif-amber i  { color: #d97706 !important; }
 .app-root.dark .notif-blue i   { color: #1976d2 !important; }
@@ -963,39 +971,32 @@ nav { flex: 1; padding: 4px 8px; }
 .app-root.dark .notif-purple i { color: #7c3aed !important; }
 .app-root.dark .tb-dd-logout i { color: #ef4444 !important; }
 .app-root.dark .tb-dd-item:hover i { color: var(--accent) !important; }
-.app-root.dark input[type="text"], .app-root.dark input[type="email"],
-.app-root.dark input[type="password"], .app-root.dark input[type="number"],
-.app-root.dark input[type="date"], .app-root.dark input[type="time"],
-.app-root.dark input[type="search"], .app-root.dark textarea, .app-root.dark select {
-  background: #1a1a1a !important; color: #ffffff !important; border-color: #333333 !important;
+
+.app-root.dark input[type="text"], 
+.app-root.dark input[type="email"],
+.app-root.dark input[type="password"], 
+.app-root.dark input[type="number"],
+.app-root.dark input[type="date"], 
+.app-root.dark input[type="time"],
+.app-root.dark input[type="search"], 
+.app-root.dark textarea, 
+.app-root.dark select {
+  background: #1a1a1a; color: #ffffff; border-color: #333333;
 }
-.app-root.dark input::placeholder, .app-root.dark textarea::placeholder { color: #9ca3af !important; }
-.app-root.dark table { background: #050505 !important; color: #ffffff !important; }
-.app-root.dark thead { background: #000000 !important; color: #ffffff !important; }
-.app-root.dark tbody tr { border-color: #333333 !important; }
-.app-root.dark tbody tr:hover { background: #101010 !important; }
-.app-root.dark td, .app-root.dark th { color: #ffffff !important; border-color: #333333 !important; }
-.app-root.dark .table-wrap { background: #050505 !important; }
-.app-root.dark button, .app-root.dark .btn { background: #3b82f6 !important; color: #fff !important; border-color: #3b82f6 !important; }
-.app-root.dark button:hover, .app-root.dark .btn:hover { background: #2563eb !important; border-color: #2563eb !important; }
-.app-root.dark button:disabled, .app-root.dark .btn:disabled { background: #4b5563 !important; }
-.app-root.dark .tb-hamburger, .app-root.dark .tb-hamburger:hover,
-.app-root.dark .tb-dark-toggle, .app-root.dark .tb-dark-toggle:hover,
-.app-root.dark .tb-notif-btn, .app-root.dark .tb-notif-btn:hover,
-.app-root.dark .tb-profile-btn, .app-root.dark .tb-profile-btn:hover {
-  background: transparent !important; border-color: transparent !important; box-shadow: none !important;
-}
-.app-root.dark .notif-mark-all, .app-root.dark .notif-mark-all:hover { background: transparent !important; border: none !important; color: var(--accent) !important; }
-.app-root.dark .tb-dd-item, .app-root.dark .tb-dd-item:hover { background: transparent !important; border: none !important; }
-.app-root.dark .tb-dd-item:hover { background: var(--tb-hover) !important; }
-.app-root.dark .tb-dd-logout, .app-root.dark .tb-dd-logout:hover { background: transparent !important; }
-.app-root.dark .tb-dd-logout:hover { background: rgba(239,68,68,0.07) !important; }
-.app-root.dark label { color: #d1d5db !important; }
+
+.app-root.dark table { background: #050505; color: #ffffff; }
+.app-root.dark thead { background: #000000; color: #ffffff; }
+.app-root.dark tbody tr { border-color: #333333; }
+.app-root.dark tbody tr:hover { background: #101010; }
+.app-root.dark td, .app-root.dark th { color: #ffffff; border-color: #333333; }
+.app-root.dark .table-wrap { background: #050505; }
+
 .app-root.dark .card, .app-root.dark .form-group,
 .app-root.dark .tb-dropdown, .app-root.dark .tb-notif-panel,
-.app-root.dark .drawer, .app-root.dark .emp-dropdown { background: #050505 !important; border-color: #222222 !important; }
+.app-root.dark .drawer, .app-root.dark .emp-dropdown { background: #050505; border-color: #222222; }
+
 .app-root.dark h1, .app-root.dark h2, .app-root.dark h3,
-.app-root.dark h4, .app-root.dark h5, .app-root.dark h6, .app-root.dark p { color: #f3f4f6 !important; }
+.app-root.dark h4, .app-root.dark h5, .app-root.dark h6, .app-root.dark p { color: #f3f4f6; }
 .app-root.dark .modal, .app-root.dark .dialog, .app-root.dark .popup { background: #050505 !important; color: #f3f4f6 !important; }
 .app-root.dark [style*="background: white"], .app-root.dark [style*="background: #fff"],
 .app-root.dark [style*="background: #ffffff"], .app-root.dark [style*="background:#fff"],
@@ -1029,13 +1030,13 @@ nav { flex: 1; padding: 4px 8px; }
 .app-root:not(.dark) .content-container { background: #f0f3f8 !important; color: #1f2937 !important; }
 
 /* ════ DRAWER STYLES ════ */
-.drawer-overlay {
+.profile-drawer-overlay {
   position: fixed;
-  top: var(--tb-h); left: 0; right: 0; bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.42);
   display: flex;
   justify-content: flex-end;
-  z-index: 400;
+  z-index: 9999;
 }
 .drawer {
   width: 100%; max-width: 420px; height: 100%;

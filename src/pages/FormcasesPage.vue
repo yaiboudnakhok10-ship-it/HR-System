@@ -165,11 +165,12 @@
                     <transition name="slide-down">
                       <div v-if="step1.damageAsset" class="asset-calc-box">
 
-                        <!-- ✅ เลือกสกุลเงิน -->
+                        <!-- ✅ เลือกสกุลเงิน (เพิ่ม กีบ) -->
                         <div class="currency-select-bar">
                           <span class="currency-select-label">
                             <i class="fas fa-coins"></i> สกุลเงิน:
                           </span>
+                          <!-- บาท -->
                           <label class="currency-option" :class="{active: step1.currencyType === 'baht'}">
                             <input
                               type="checkbox"
@@ -179,6 +180,7 @@
                             >
                             <span class="currency-flag">🇹🇭</span> ບາດ (บาท)
                           </label>
+                          <!-- ดอลลาร์ -->
                           <label class="currency-option" :class="{active: step1.currencyType === 'dollar'}">
                             <input
                               type="checkbox"
@@ -188,98 +190,159 @@
                             >
                             <span class="currency-flag">🇺🇸</span> ໂດລາ (ดอลลาร์)
                           </label>
-                          <span class="currency-badge-selected" :class="step1.currencyType === 'dollar' ? 'dollar' : 'baht'">
-                            {{ step1.currencyType === 'dollar' ? '✓ ໂດລາ $' : '✓ ບາດ ฿' }}
+                          <!-- ✅ กีบ (ใหม่) -->
+                          <label class="currency-option" :class="{active: step1.currencyType === 'kip'}">
+                            <input
+                              type="checkbox"
+                              :checked="step1.currencyType === 'kip'"
+                              @change="step1.currencyType = 'kip'"
+                              class="currency-cb"
+                            >
+                            <span class="currency-flag">🇱🇦</span> ກີບ (กีบ)
+                          </label>
+                          <span
+                            class="currency-badge-selected"
+                            :class="step1.currencyType === 'dollar' ? 'dollar' : step1.currencyType === 'kip' ? 'kip' : 'baht'"
+                          >
+                            {{ step1.currencyType === 'dollar' ? '✓ ໂດລາ $' : step1.currencyType === 'kip' ? '✓ ກີບ ₭' : '✓ ບາດ ฿' }}
                           </span>
                         </div>
 
-                        <div class="calc-row-label">ຄິດໄລ່ຄ່າເສຍຫາຍ</div>
-                        <div class="calc-grid-row">
-                          <div class="calc-cell">
-                            <label class="calc-cell-label">
-                              ป้อนจำนวนเงิน ({{ step1.currencyType === 'dollar' ? 'ໂດລາ $' : 'ບາດ ฿' }})
-                            </label>
-                            <input
-                              type="text"
-                              class="form-control calc-input"
-                              :value="formatNumber(step1.amountBaht)"
-                              @input="e => step1.amountBaht = unformat(e.target.value)"
-                              @keypress="allowNumberOnly"
-                              placeholder="0"
-                              inputmode="numeric"
-                            >
+                        <!-- ✅ โหมด กีบ: ป้อนกีบโดยตรง -->
+                        <template v-if="step1.currencyType === 'kip'">
+                          <div class="calc-row-label">ຄິດໄລ່ຄ່າເສຍຫາຍ (ກີບ)</div>
+                          <div class="calc-grid-row" style="grid-template-columns:1fr 1fr; gap:12px;">
+                            <div class="calc-cell">
+                              <label class="calc-cell-label">ປ້ອນຈຳນວນເງິນກີບ (₭)</label>
+                              <input
+                                type="text"
+                                class="form-control calc-input"
+                                :value="formatNumber(step1.amountKipDirect)"
+                                @input="e => step1.amountKipDirect = unformat(e.target.value)"
+                                @keypress="allowNumberOnly"
+                                placeholder="0"
+                                inputmode="numeric"
+                              >
+                            </div>
+                            <div class="calc-cell">
+                              <label class="calc-cell-label">ป้อนจำนวนงวด (ງວດ)</label>
+                              <input type="number" class="form-control calc-input" v-model="step1.installments" placeholder="1" min="1">
+                            </div>
                           </div>
-                          <div class="calc-oper-cell">
-                            <span class="calc-oper-badge calc-oper-percent">ຄູນ %</span>
+                          <div class="calc-result-row" style="margin-top:10px;">
+                            <div class="calc-equal-box" v-if="perInstallmentKip > 0">
+                              <span class="calc-equal-label">= ງວດລະ</span>
+                              <span class="calc-equal-value">{{ perInstallmentKip.toLocaleString() }}</span>
+                              <span class="calc-equal-unit">ກີບ / งวด</span>
+                            </div>
+                            <div class="calc-equal-box calc-equal-empty" v-else>
+                              <span style="color:#94a3b8;font-size:12px;">ผลลัพธ์ต่องวดจะแสดงที่นี่</span>
+                            </div>
+                            <div class="calc-date-field">
+                              <label class="calc-cell-label">จ่ายงวดวันที</label>
+                              <input type="date" class="form-control calc-input" v-model="step1.payDate">
+                            </div>
                           </div>
-                          <div class="calc-cell">
-                            <label class="calc-cell-label">เปอร์เซ็นต์ (%)</label>
-                            <input type="number" class="form-control calc-input" v-model="step1.percent" placeholder="0" min="0" max="100" step="1">
+                          <div v-if="totalKip > 0" class="calc-summary">
+                            <i class="fas fa-check-circle"></i>
+                            <span>
+                              <strong>{{ formatNumber(step1.amountKipDirect) }} ກີບ</strong>
+                              <template v-if="step1.installments > 1"> ÷ <strong>{{ step1.installments }} ງວດ</strong> = งวดละ <strong>{{ perInstallmentKip.toLocaleString() }} ກີບ</strong></template>
+                            </span>
                           </div>
-                        </div>
-                        <div class="calc-result-percent" v-if="amountAfterPercent > 0">
-                          <i class="fas fa-percent"></i>
-                          <span>
-                            ຈຳນວນເງິນຫຼັງຫານ {{ step1.percent || 0 }}% =
-                            <strong>{{ amountAfterPercent.toLocaleString() }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong>
-                          </span>
-                        </div>
-                        <div class="calc-grid-row" style="margin-top:10px;">
-                          <div class="calc-cell">
-                            <label class="calc-cell-label">
-                              ຈຳນວນເງິນຫຼັງຄູນ % ({{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }})
-                            </label>
-                            <input type="text" class="form-control calc-input calc-result"
-                              :value="amountAfterPercent > 0 ? amountAfterPercent.toLocaleString() + (step1.currencyType === 'dollar' ? ' ໂດລາ' : ' ບາດ') : ''"
-                              readonly>
+                        </template>
+
+                        <!-- ✅ โหมด บาท / ดอลลาร์: เหมือนเดิม -->
+                        <template v-else>
+                          <div class="calc-row-label">ຄິດໄລ່ຄ່າເສຍຫາຍ</div>
+                          <div class="calc-grid-row">
+                            <div class="calc-cell">
+                              <label class="calc-cell-label">
+                                ป้อนจำนวนเงิน ({{ step1.currencyType === 'dollar' ? 'ໂດລາ $' : 'ບາດ ฿' }})
+                              </label>
+                              <input
+                                type="text"
+                                class="form-control calc-input"
+                                :value="formatNumber(step1.amountBaht)"
+                                @input="e => step1.amountBaht = unformat(e.target.value)"
+                                @keypress="allowNumberOnly"
+                                placeholder="0"
+                                inputmode="numeric"
+                              >
+                            </div>
+                            <div class="calc-oper-cell">
+                              <span class="calc-oper-badge calc-oper-percent">ຄູນ %</span>
+                            </div>
+                            <div class="calc-cell">
+                              <label class="calc-cell-label">เปอร์เซ็นต์ (%)</label>
+                              <input type="number" class="form-control calc-input" v-model="step1.percent" placeholder="0" min="0" max="100" step="1">
+                            </div>
                           </div>
-                          <div class="calc-oper-cell">
-                            <span class="calc-oper-badge">ຄູນ ×</span>
+                          <div class="calc-result-percent" v-if="amountAfterPercent > 0">
+                            <i class="fas fa-percent"></i>
+                            <span>
+                              ຈຳນວນເງິນຫຼັງຫານ {{ step1.percent || 0 }}% =
+                              <strong>{{ amountAfterPercent.toLocaleString() }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong>
+                            </span>
                           </div>
-                          <div class="calc-cell">
-                            <label class="calc-cell-label">(ອັດຕາແລກປ່ຽນ)</label>
-                            <input type="number" class="form-control calc-input" v-model="step1.rateKip" placeholder="0" min="0">
+                          <div class="calc-grid-row" style="margin-top:10px;">
+                            <div class="calc-cell">
+                              <label class="calc-cell-label">
+                                ຈຳນວນເງິນຫຼັງຄູນ % ({{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }})
+                              </label>
+                              <input type="text" class="form-control calc-input calc-result"
+                                :value="amountAfterPercent > 0 ? amountAfterPercent.toLocaleString() + (step1.currencyType === 'dollar' ? ' ໂດລາ' : ' ບາດ') : ''"
+                                readonly>
+                            </div>
+                            <div class="calc-oper-cell">
+                              <span class="calc-oper-badge">ຄູນ ×</span>
+                            </div>
+                            <div class="calc-cell">
+                              <label class="calc-cell-label">(ອັດຕາແລກປ່ຽນ)</label>
+                              <input type="number" class="form-control calc-input" v-model="step1.rateKip" placeholder="0" min="0">
+                            </div>
                           </div>
-                        </div>
-                        <div class="calc-grid-row" style="margin-top:10px;">
-                          <div class="calc-cell">
-                            <label class="calc-cell-label">ຈຳນວນເງິນກີບ</label>
-                            <input type="text" class="form-control calc-input calc-result"
-                              :value="totalKip > 0 ? totalKip.toLocaleString() + ' ກີບ' : ''"
-                              readonly placeholder="คำนวณอัตโนมัติ">
+                          <div class="calc-grid-row" style="margin-top:10px;">
+                            <div class="calc-cell">
+                              <label class="calc-cell-label">ຈຳນວນເງິນກີບ</label>
+                              <input type="text" class="form-control calc-input calc-result"
+                                :value="totalKip > 0 ? totalKip.toLocaleString() + ' ກີບ' : ''"
+                                readonly placeholder="คำนวณอัตโนมัติ">
+                            </div>
+                            <div class="calc-oper-cell">
+                              <span class="calc-oper-badge calc-oper-div">ຫານ ÷</span>
+                            </div>
+                            <div class="calc-cell">
+                              <label class="calc-cell-label">ป้อนจำนวนงวด (ງວດ)</label>
+                              <input type="number" class="form-control calc-input" v-model="step1.installments" placeholder="1" min="1">
+                            </div>
                           </div>
-                          <div class="calc-oper-cell">
-                            <span class="calc-oper-badge calc-oper-div">ຫານ ÷</span>
+                          <div class="calc-result-row">
+                            <div class="calc-equal-box" v-if="perInstallmentKip > 0">
+                              <span class="calc-equal-label">= ງວດລະ</span>
+                              <span class="calc-equal-value">{{ perInstallmentKip.toLocaleString() }}</span>
+                              <span class="calc-equal-unit">ກີບ / งวด</span>
+                            </div>
+                            <div class="calc-equal-box calc-equal-empty" v-else>
+                              <span style="color:#94a3b8;font-size:12px;">ผลลัพธ์ต่องวดจะแสดงที่นี่</span>
+                            </div>
+                            <div class="calc-date-field">
+                              <label class="calc-cell-label">จ่ายงวดวันที</label>
+                              <input type="date" class="form-control calc-input" v-model="step1.payDate">
+                            </div>
                           </div>
-                          <div class="calc-cell">
-                            <label class="calc-cell-label">ป้อนจำนวนงวด (ງວດ)</label>
-                            <input type="number" class="form-control calc-input" v-model="step1.installments" placeholder="1" min="1">
+                          <div v-if="totalKip > 0" class="calc-summary">
+                            <i class="fas fa-check-circle"></i>
+                            <span>
+                              <strong>{{ formatNumber(step1.amountBaht) }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong>
+                              <template v-if="step1.percent > 0"> → ຫານ {{ step1.percent }}% = <strong>{{ amountAfterPercent.toLocaleString() }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong> → </template>
+                              × เรด <strong>{{ Number(step1.rateKip||0).toLocaleString() }}</strong>
+                              = <strong>{{ totalKip.toLocaleString() }} ກີບ</strong>
+                              <template v-if="step1.installments > 1"> ÷ <strong>{{ step1.installments }} ງວດ</strong> = งวดละ <strong>{{ perInstallmentKip.toLocaleString() }} ກີບ</strong></template>
+                            </span>
                           </div>
-                        </div>
-                        <div class="calc-result-row">
-                          <div class="calc-equal-box" v-if="perInstallmentKip > 0">
-                            <span class="calc-equal-label">= ງວດລະ</span>
-                            <span class="calc-equal-value">{{ perInstallmentKip.toLocaleString() }}</span>
-                            <span class="calc-equal-unit">ກີບ / งวด</span>
-                          </div>
-                          <div class="calc-equal-box calc-equal-empty" v-else>
-                            <span style="color:#94a3b8;font-size:12px;">ผลลัพธ์ต่องวดจะแสดงที่นี่</span>
-                          </div>
-                          <div class="calc-date-field">
-                            <label class="calc-cell-label">จ่ายงวดวันที</label>
-                            <input type="date" class="form-control calc-input" v-model="step1.payDate">
-                          </div>
-                        </div>
-                        <div v-if="totalKip > 0" class="calc-summary">
-                          <i class="fas fa-check-circle"></i>
-                          <span>
-                            <strong>{{ formatNumber(step1.amountBaht) }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong>
-                            <template v-if="step1.percent > 0"> → ຫານ {{ step1.percent }}% = <strong>{{ amountAfterPercent.toLocaleString() }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong> → </template>
-                            × เรด <strong>{{ Number(step1.rateKip||0).toLocaleString() }}</strong>
-                            = <strong>{{ totalKip.toLocaleString() }} ກີບ</strong>
-                            <template v-if="step1.installments > 1"> ÷ <strong>{{ step1.installments }} ງວດ</strong> = งวดละ <strong>{{ perInstallmentKip.toLocaleString() }} ກີບ</strong></template>
-                          </span>
-                        </div>
+                        </template>
+
                       </div>
                     </transition>
                     <div class="cb-group" style="margin-top:8px;">
@@ -373,13 +436,27 @@
                   <div class="form-group">
                     <label class="form-label">ปะຫວັດກະທຳຄວາມຜິດ ແລະ ຖືກລົງໂທດ</label>
                     <div class="cb-group">
-                      <input type="checkbox" v-model="step2.historyTypes" value="never" id="s2never">
+                      <input type="checkbox" :checked="step2.historyType === 'never'" @change="onHistoryTypeChange('never')" id="s2never">
                       <label for="s2never" class="cb-label">ບໍ່ເຄີຍ</label>
                     </div>
                     <div class="cb-group">
-                      <input type="checkbox" v-model="step2.historyTypes" value="has" id="s2has">
+                      <input type="checkbox" :checked="step2.historyType === 'has'" @change="onHistoryTypeChange('has')" id="s2has">
                       <label for="s2has" class="cb-label">ເຄີຍຖຶກໂທດທາງວິໄນ</label>
                     </div>
+                    <transition name="fade">
+                      <div class="form-group" style="margin-top: 10px;">
+                        <label class="form-label" style="color:var(--primary-dark);">
+                          <i class="fas fa-info-circle" style="margin-right:5px;"></i>
+                          ລາຍລະອຽດປະຫວັດ
+                        </label>
+                        <textarea 
+                          class="form-control" 
+                          v-model="step2.historyDetail" 
+                          placeholder="ປ້ອນລາຍລະອຽດປະຫວັດການກະທຳຄວາມຜິດ ແລະ ການຖືກລົງໂທດ"
+                          rows="3"
+                        ></textarea>
+                      </div>
+                    </transition>
                   </div>
                   <div class="form-group">
                     <label class="form-label">ลงชื่อ (HR)</label>
@@ -392,13 +469,13 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label">รูปภาพลายเซ็น HR</label>
-                    <div v-if="step2.hrImg" style="margin-top:6px;padding:10px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:8px;">
-                      <img :src="step2.hrImg" style="max-height:70px;border:1px solid #ddd;border-radius:6px;display:block;">
-                      <span v-if="step2.hrResponsibility" style="font-size:11px;color:#0284c7;margin-top:5px;display:block;font-weight:600;">
+                    <div v-if="step2.hrImg" style="margin-top:6px;padding:8px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:8px;">
+                      <img :src="step2.hrImg" style="max-height:50px;border:1px solid #ddd;border-radius:6px;display:block;">
+                      <span v-if="step2.hrResponsibility" style="font-size:10px;color:#0284c7;margin-top:4px;display:block;font-weight:600;">
                         {{ step2.hrResponsibility }}
                       </span>
                     </div>
-                    <div v-else style="font-size:12px;color:#94a3b8;margin-top:6px;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;text-align:center;">
+                    <div v-else style="font-size:11px;color:#94a3b8;margin-top:6px;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;text-align:center;">
                       <i class="fas fa-image" style="margin-right:5px;"></i> เลือก HR เพื่อแสดงรูปลายเซ็น
                     </div>
                   </div>
@@ -515,21 +592,33 @@
                 <!-- ✅ แสดงสกุลเงินที่เลือก -->
                 <div v-if="step1.damageAsset">
                   <strong>สกุลเงิน:</strong>
-                  <span :class="step1.currencyType === 'dollar' ? 'currency-preview-dollar' : 'currency-preview-baht'">
-                    {{ step1.currencyType === 'dollar' ? '🇺🇸 ໂດລາ (ดอลลาร์)' : '🇹🇭 ບາດ (บาท)' }}
+                  <span
+                    :class="step1.currencyType === 'dollar' ? 'currency-preview-dollar' : step1.currencyType === 'kip' ? 'currency-preview-kip' : 'currency-preview-baht'"
+                  >
+                    {{ step1.currencyType === 'dollar' ? '🇺🇸 ໂດລາ (ดอลลาร์)' : step1.currencyType === 'kip' ? '🇱🇦 ກີບ (กีบ)' : '🇹🇭 ບາດ (บาท)' }}
                   </span>
                 </div>
                 <div v-if="step1.damageAsset && totalKip > 0" style="margin-top:8px;padding:10px;background:#f0fdf4;border-radius:8px;border:1px solid #86efac;">
                   <strong>ສ່ວນທີ 5 (ຍິນຍອມຊົດໃຊ້):</strong><br>
-                  <template v-if="step1.percent > 0">
-                    ມູນຄ່າຈຳນວນເງິນ {{ formatNumber(step1.amountBaht) }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }} x ຄູນ {{ step1.percent }}% = <strong>{{ amountAfterPercent.toLocaleString() }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong><br>
+                  <!-- กีบโดยตรง -->
+                  <template v-if="step1.currencyType === 'kip'">
+                    ຈຳນວນເງິນທັງໝົດ: <strong>{{ totalKip.toLocaleString() }} ກີບ</strong><br>
                   </template>
-                  ຈຳນວນເງິນທັງໝົດ: <strong>{{ totalKip.toLocaleString() }} ກີບ</strong>
-                  <template v-if="step1.amountBaht"> / <strong>{{ formatNumber(step1.amountBaht) }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong></template><br>
+                  <!-- บาท/ดอลลาร์ -->
+                  <template v-else>
+                    <template v-if="step1.percent > 0">
+                      ມູນຄ່າຈຳນວນເງິນ {{ formatNumber(step1.amountBaht) }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }} x ຄູນ {{ step1.percent }}% = <strong>{{ amountAfterPercent.toLocaleString() }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong><br>
+                    </template>
+                    ຈຳນວນເງິນທັງໝົດ: <strong>{{ totalKip.toLocaleString() }} ກີບ</strong>
+                    <template v-if="step1.amountBaht"> / <strong>{{ formatNumber(step1.amountBaht) }} {{ step1.currencyType === 'dollar' ? 'ໂດລາ' : 'ບາດ' }}</strong></template><br>
+                  </template>
                   <template v-if="step1.installments > 1">ແບ່ງ <strong>{{ step1.installments }} ງວດ</strong> — ງວດລະ <strong>{{ perInstallmentKip.toLocaleString() }} ກີບ</strong><br></template>
                   <template v-if="step1.payDate">ເລີ່ມຊຳລະ: <strong>{{ step1.payDate }}</strong></template>
                 </div>
-                <div v-if="step2.historyTypes && step2.historyTypes.length"><strong>ປະຫວັດ:</strong> {{ step2.historyTypes.includes('never') ? 'ບໍ່ເຄີຍ' : '' }}{{ step2.historyTypes.includes('has') ? (step2.historyTypes.includes('never') ? ', ' : '') + 'ເຄີຍຖຶກໂທດທາງວິໄນ' : '' }}</div>
+                <div v-if="step2.historyType"><strong>ປະຫວັດ:</strong> {{ step2.historyType === 'never' ? 'ບໍ່ເຄີຍ' : 'ເຄີຍຖຶກໂທດທາງວິໄນ' }}</div>
+                <div v-if="step2.historyDetail" style="padding-left:20px; color:#64748b; font-size:12px;">
+                  <strong>ລາຍລະອຽດ:</strong> {{ step2.historyDetail }}
+                </div>
                 <div v-if="step2.hrName"><strong>HR:</strong> {{ step2.hrName }} <span v-if="step2.hrResponsibility">({{ step2.hrResponsibility }})</span></div>
                 <div v-if="step3.witness1Name"><strong>ພະຍານ:</strong> {{ step3.witness1Name }} — {{ step3.witness1Detail }}</div>
                 <div v-if="step3.witness2Name"><strong>ຮັກສາການ:</strong> {{ step3.witness2Name }} — {{ step3.witness2Detail }}</div>
@@ -659,7 +748,6 @@ import { useSignatureStore }    from '@/stores/Usesignaturestore'
 import { useDocumentTypeStore } from '@/stores/Usedocumenttypestore'
 import { useDisciplineStore }   from '../stores/Usedisciplinestore'
 import { useRegulationTypeStore } from '../stores/regulation_type.store'
-import { useTopicRecordsStore } from '@/stores/topic_records.store'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { supabase } from '@/services/supabase'
@@ -679,7 +767,6 @@ const sigStore        = useSignatureStore()
 const docStore        = useDocumentTypeStore()
 const disciplineStore = useDisciplineStore()
 const regStore        = useRegulationTypeStore()
-const warningTypeStore = useTopicRecordsStore()
 
 const router = useRouter()
 const route  = useRoute()
@@ -692,7 +779,6 @@ onMounted(() => {
   sigStore.getSignatures()
   docStore.getDocuments()
   regStore.getRegulationTypes()
-  warningTypeStore.getTopicRecords()
   try {
     if (localStorage.getItem('formcases_darkmode') === '1') applyDark(true)
   } catch { /* ignore storage errors */ }
@@ -727,26 +813,12 @@ const emp = ref({
 })
 
 const caseType = ref('')
-const defaultCaseTypeOptions = [
-  { value: 'ຈອດແຊ', label: 'ຈອດແຊ (จอดแซ)' },
-  { value: 'ອູປະຕຶເຫດ', label: 'ອູປະຕຶເຫດ (อุบัติเหตุ)' },
-  { value: 'Excess', label: 'Excess' },
-  { value: 'ຂາດງານ', label: 'ຂາດງານ (ขาดงาน)' },
+const caseTypeOptions = [
+  { value: 'ຈອດແຊ',     label: 'ຈອດແຊ (จอดแซ)' },
+  { value: 'ອຸປະຕິເຫດ', label: 'ອຸປະຕິເຫດ (อุบัติเหตุ)' },
+  { value: 'Excess',    label: 'Excess' },
+  { value: 'ຂາດງານ',   label: 'ຂາດງານ (ขาดงาน)' },
 ]
-
-const caseTypeOptions = computed(() => {
-  const topics = (warningTypeStore.topic_records || [])
-    .map((r) => (r?.topic || '').trim())
-    .filter(Boolean)
-
-  const unique = Array.from(new Set(topics))
-
-  const current = (caseType.value || '').trim()
-  if (current && !unique.includes(current)) unique.unshift(current)
-
-  if (unique.length) return unique.map((t) => ({ value: t, label: t }))
-  return defaultCaseTypeOptions
-})
 
 const activeStep = ref(1)
 const isAdding   = ref(false)
@@ -765,16 +837,18 @@ const step1 = ref({
   percent: 0,
   installments: '',
   payDate: '',
-  currencyType: 'baht', // ✅ 'baht' | 'dollar'
+  currencyType: 'baht',   // 'baht' | 'dollar' | 'kip'
+  amountKipDirect: '',    // ✅ ใช้เมื่อ currencyType === 'kip'
 })
 
 const step2 = ref({
   hasViolation: false,
-  historyTypes: [],
+  historyType: '',
+  historyDetail: '',
   hrId: null, hrName: '', hrResponsibility: '', hrImg: '',
-  regulationTypeId:   null,
+  regulationTypeId: null,
   regulationTypeName: '',
-  regulationList:     [],
+  regulationList: [],
 })
 
 const step3 = ref({
@@ -830,6 +904,7 @@ const loadCaseForEdit = async (id) => {
 
     caseType.value = data.case_type || ''
 
+    const savedCurrencyType = data.currency_type || 'baht'
     step1.value = {
       damagePersonal: (data.damage_types || []).includes('personal'),
       damageAsset: (data.damage_types || []).includes('asset'),
@@ -839,12 +914,15 @@ const loadCaseForEdit = async (id) => {
       percent: data.percent || 0,
       installments: data.installments || '',
       payDate: data.pay_date || '',
-      currencyType: data.currency_type || 'baht',
+      currencyType: savedCurrencyType,
+      // ✅ โหลด amountKipDirect ถ้าเป็น kip mode
+      amountKipDirect: savedCurrencyType === 'kip' ? (data.amount_kip_direct || data.total_kip || '') : '',
     }
 
     step2.value = {
       hasViolation: !!data.has_violation,
-      historyTypes: [],
+      historyType: data.history_type || 'never',
+      historyDetail: data.history_detail || '',
       hrId: matchSignatureId(data.hr_name, data.hr_image),
       hrName: data.hr_name || '',
       hrResponsibility: data.hr_responsibility || '',
@@ -852,9 +930,6 @@ const loadCaseForEdit = async (id) => {
       regulationTypeId: matchRegTypeIdByName(data.regulation_type_name || ''),
       regulationTypeName: data.regulation_type_name || '',
       regulationList: Array.isArray(data.regulation_list) ? data.regulation_list : [],
-      historyType: data.history_type || 'never',
-      historyNever: String(data.history_type || 'never') !== 'has',
-      historyHas: String(data.history_type || 'never') === 'has'
     }
 
     const p = data.punish_types || []
@@ -912,14 +987,22 @@ const onRegulationTypeChange = () => {
   }
 }
 
+// ✅ amountAfterPercent — ใช้เฉพาะ baht/dollar mode
 const amountAfterPercent = computed(() => {
+  if (step1.value.currencyType === 'kip') return 0
   const baht    = parseFloat(step1.value.amountBaht) || 0
   const percent = parseFloat(step1.value.percent)    || 0
   if (percent <= 0) return baht
   return baht * (percent / 100)
 })
 
+// ✅ totalKip — รองรับ 3 โหมด
 const totalKip = computed(() => {
+  if (step1.value.currencyType === 'kip') {
+    // โหมดกีบ: ป้อนตรง
+    return parseFloat(step1.value.amountKipDirect) || 0
+  }
+  // โหมดบาท/ดอลลาร์: คำนวณจาก rate
   const base = amountAfterPercent.value
   const rate = parseFloat(step1.value.rateKip) || 0
   return base * rate
@@ -998,6 +1081,14 @@ const selectWitness = (item) => {
   witnessSuggestions.value = []
 }
 
+const onHistoryTypeChange = (type) => {
+  if (step2.value.historyType === type) {
+    step2.value.historyType = ''
+  } else {
+    step2.value.historyType = type
+  }
+}
+
 const closeSuggestDelay = (type) => {
   setTimeout(() => {
     if (type === 'emp')     suggestions.value        = []
@@ -1031,9 +1122,9 @@ const resetAll = () => {
   saveStatus.value = null
   caseType.value = ''
   emp.value   = { code:'', name:'', dept:'', damage:'', startDate:'', location:'', witness:'', witnessCode:'', damageDetail:'', damageValue:'', investigator:'' }
-  step1.value = { damagePersonal:false, damageAsset:false, damageOther:false, rateKip:'', amountBaht:'', percent:0, installments:'', payDate:'', currencyType:'baht' }
+  step1.value = { damagePersonal:false, damageAsset:false, damageOther:false, rateKip:'', amountBaht:'', percent:0, installments:'', payDate:'', currencyType:'baht', amountKipDirect:'' }
   step2.value = {
-    hasViolation:false, historyTypes:[],
+    hasViolation:false, historyType:'', historyDetail:'',
     hrId:null, hrName:'', hrResponsibility:'', hrImg:'',
     regulationTypeId: null, regulationTypeName: '', regulationList: [],
   }
@@ -1076,7 +1167,7 @@ const addToList = async () => {
     const snapshot = {
       caseType:           caseType.value,
       emp:                { ...emp.value },
-      step1:              { ...step1.value }, // currencyType อยู่ใน step1 แล้ว
+      step1:              { ...step1.value },
       step2:              { ...step2.value, regulationList: [...(step2.value.regulationList || [])] },
       step3:              { ...step3.value },
       step4:              { ...step4.value },
@@ -1172,21 +1263,25 @@ const saveAndBuildPrintHtml = async (row) => {
   ])
 
   const result = await disciplineStore.saveCase({
-    emp:                row.emp,
-    step1:              row.step1,
-    step2:              row.step2,
-    step3:              row.step3,
-    step4:              row.step4,
-    step5:              row.step5,
-    totalKip:           row.totalKip,
-    amountAfterPercent: row.amountAfterPercent,
-    created_by:         auth.session?.fullname || auth.session?.username || null,
-    created_at:         new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
-    case_type:          row.caseType || null,
-    percent:            row.step1.percent || 0,
-    history_type:       row.step2.historyTypes.join(','),
-    currency_type:      row.step1.currencyType || 'baht',
-  })
+        emp:                row.emp,
+        step1:              row.step1,
+        step2:              row.step2,
+        step3:              row.step3,
+        step4:              row.step4,
+        step5:              row.step5,
+        totalKip:           row.totalKip,
+        amountAfterPercent: row.amountAfterPercent,
+        created_by:         auth.session?.fullname || auth.session?.username || null,
+        created_at:         new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
+        case_type:          row.caseType || null,
+        percent:            row.step1.percent || 0,
+        history_type:       row.step2.historyType || 'never',
+        currency_type:      row.step1.currencyType || 'baht',
+        // ✅ ส่ง amountKipDirect ด้วย
+        amount_kip_direct:  row.step1.currencyType === 'kip' ? (parseFloat(row.step1.amountKipDirect) || null) : null,
+        // ✅ ส่ง historyDetail ด้วย
+        history_detail:     row.step2.historyDetail || null,
+      })
 
   if (!result.success) throw new Error(result.error)
 
@@ -1239,7 +1334,6 @@ const updateCaseFallback = async (id, payload) => {
 const saveEditAndPrint = async () => {
   isPrintingAll.value = true
   try {
-    // รวบรวมข้อมูลปัจจุบันจากฟอร์มให้เหมือนกับ addToList
     const rowData = {
       emp:                JSON.parse(JSON.stringify(emp.value)),
       caseType:           caseType.value,
@@ -1250,9 +1344,9 @@ const saveEditAndPrint = async () => {
       step5:              JSON.parse(JSON.stringify(step5.value)),
       totalKip:           totalKip.value,
       amountAfterPercent: amountAfterPercent.value,
+      perInstallmentKip:  perInstallmentKip.value,
     }
 
-    // เตรียมรูปภาพ
     const [logo1, logo2, hrImgB64] = await Promise.all([
       toBase64(PRINT_LOGO_1).catch(() => ''),
       toBase64(PRINT_LOGO_2).catch(() => ''),
@@ -1270,14 +1364,29 @@ const saveEditAndPrint = async () => {
       amountAfterPercent: rowData.amountAfterPercent,
       case_type:          rowData.caseType || null,
       percent:            rowData.step1.percent || 0,
-      history_type:       rowData.step2.historyTypes.join(','),
+      history_type:       rowData.step2.historyType || 'never',
       currency_type:      rowData.step1.currencyType || 'baht',
     }
 
     let result
-    if (typeof disciplineStore.updateCase === 'function') {
-      result = await disciplineStore.updateCase(editId.value, payload)
-    } else {
+      if (typeof disciplineStore.updateCase === 'function') {
+        result = await disciplineStore.updateCase(editId.value, {
+          emp:                payload.emp,
+          step1:              payload.step1,
+          step2:              payload.step2,
+          step3:              payload.step3,
+          step4:              payload.step4,
+          step5:              payload.step5,
+          totalKip:           payload.totalKip,
+          amountAfterPercent: payload.amountAfterPercent,
+          case_type:          payload.case_type || null,
+          percent:            payload.percent || 0,
+          history_type:       payload.history_type || 'never',
+          currency_type:      payload.currency_type || 'baht',
+          amount_kip_direct:  payload.step1.currencyType === 'kip' ? (parseFloat(payload.step1.amountKipDirect) || null) : null,
+          history_detail:     payload.step2.historyDetail || null,
+        })
+      } else {
       const punishTypes = []
       if (payload.step3.punish1) punishTypes.push('verbal')
       if (payload.step3.punish2) punishTypes.push('written1')
@@ -1306,6 +1415,8 @@ const saveEditAndPrint = async () => {
         damage_types: damageTypes,
         amount_baht:  payload.step1.amountBaht ? Number(payload.step1.amountBaht) : null,
         currency_type: payload.currency_type || 'baht',
+        // ✅ บันทึก amountKipDirect
+        amount_kip_direct: payload.step1.currencyType === 'kip' ? (parseFloat(payload.step1.amountKipDirect) || null) : null,
         percent: payload.percent !== undefined && payload.percent !== null && payload.percent !== ''
             ? Number(payload.percent)
             : (payload.step1.percent !== undefined && payload.step1.percent !== null && payload.step1.percent !== '' ? Number(payload.step1.percent) : null),
@@ -1317,6 +1428,7 @@ const saveEditAndPrint = async () => {
 
         has_violation: payload.step2.hasViolation || false,
         history_type:  payload.history_type || 'never',
+        history_detail: payload.step2.historyDetail || null,
         hr_name:       payload.step2.hrName || null,
         hr_image:      payload.step2.hrImg  || null,
         hr_responsibility: payload.step2.hrResponsibility || null,
@@ -1353,7 +1465,6 @@ const saveEditAndPrint = async () => {
 
     saveStatus.value = { type: 'success', message: 'แก้ไขสำเร็จ!' }
 
-    // สร้าง HTML สำหรับพิมพ์
     let htmlContent = buildPrintHTML(rowData)
     htmlContent = htmlContent
       .replace(PRINT_LOGO_1, logo1)
@@ -1474,19 +1585,20 @@ const buildPrintHTML = (row) => {
   const caseTypeVal      = row.caseType         || ''
   const investigator     = row.emp.investigator || '_________________'
 
-  // ✅ ดึงสกุลเงินจาก snapshot
+  // ✅ สกุลเงิน — รองรับ kip
   const currType    = row.step1.currencyType || 'baht'
-  const currLabelPrint = currType === 'dollar' ? 'ໂດລາ' : 'ບາດ'
-  const currSymbol  = currType === 'dollar' ? '$' : '฿'
+  const currLabelPrint = currType === 'dollar' ? 'ໂດລາ' : currType === 'kip' ? 'ກີບ' : 'ບາດ'
+  const currSymbol  = currType === 'dollar' ? '$' : currType === 'kip' ? '₭' : '฿'
 
   const hasPersonal = row.step1.damagePersonal
   const hasAsset    = row.step1.damageAsset
   const hasOther    = row.step1.damageOther
 
   const hasViol     = row.step2.hasViolation
-  const neverPunish = row.step2.historyTypes.includes('never')
-  const hasPunish   = row.step2.historyTypes.includes('has')
-  const hrName      = row.step2.hrName           || '_________________'
+  const neverPunish = row.step2.historyType === 'never'
+  const hasPunish = row.step2.historyType === 'has'
+  const historyDetail = row.step2.historyDetail || ''
+  const hrName = row.step2.hrName || '_________________'
   const hrResponsib = row.step2.hrResponsibility || 'ພະຍານHR'
   const hrImgSrc    = row.step2.hrImg
 
@@ -1499,12 +1611,20 @@ const buildPrintHTML = (row) => {
   const witness2Detail = row.step3.witness2Detail  || 'ຮັກສາການຜູ້ຈັດການສ່ວນບໍລິຫານຊັບພະຍາກອນບຸກຄົນ'
   const punish5Text    = row.step3.punish5Text    || ''
 
+  // ✅ คำนวณตัวเลขสำหรับพิมพ์ — รองรับ kip mode
   const amountBahtNum          = parseFloat(row.step1.amountBaht) || 0
   const percentNum             = parseFloat(row.step1.percent) || 0
-  const amountAfterPercentNum  = row.amountAfterPercent
+  const amountAfterPercentNum  = row.amountAfterPercent || 0
   const amtAfterPercentDisplay = amountAfterPercentNum.toLocaleString()
+
+  // กีบ mode: ใช้ amountKipDirect เป็น "จำนวนเงิน" ที่แสดงในส่วน 5
+  const isKipMode = currType === 'kip'
   const amtKip       = row.totalKip > 0 ? row.totalKip.toLocaleString() : ''
-  const amtBahtOrig  = amountBahtNum.toLocaleString()
+  // จำนวนเงินต้น (ก่อนแปลง) สำหรับแสดงในส่วน 5
+  const displayAmountOrig = isKipMode
+    ? (parseFloat(row.step1.amountKipDirect) || 0).toLocaleString()
+    : amountBahtNum.toLocaleString()
+
   const installment  = row.step1.installments || ''
   const perInstall   = row.perInstallmentKip > 0 ? row.perInstallmentKip.toLocaleString() : ''
   const payDateFormatted = formatLaoDate(row.step1.payDate || '')
@@ -1521,26 +1641,26 @@ const buildPrintHTML = (row) => {
     ? `<span style="width:11px;height:11px;border:1.5px solid #555;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;">✓</span>`
     : `<span style="width:11px;height:11px;border:1.5px solid #555;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"></span>`
 
-  const hrSigBox = `<span style="border-bottom:1px solid #888;display:inline-flex;align-items:flex-end;justify-content:center;width:150px;min-height:68px;overflow:hidden;flex-shrink:0;">
-    ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:148px;max-height:66px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
+  const hrSigBox = `<span style="border-bottom:1px solid #888;display:inline-flex;align-items:flex-end;justify-content:center;width:120px;min-height:50px;overflow:hidden;flex-shrink:0;">
+    ${hrImgSrc ? `<img src="${hrImgSrc}" style="max-width:118px;max-height:48px;width:auto;height:auto;object-fit:contain;object-position:center bottom;display:block;">` : ''}
   </span>`
 
   const docSigBlock = (name, detail) => `
-    <div style="margin-bottom:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:220px; min-height:40px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="margin-bottom:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:180px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
-      <div style="font-size:10px; margin-top:4px;">(${name}) ${detail}</div>
+      <div style="font-size:9px; margin-top:3px;">(${name}) ${detail}</div>
     </div>`
 
   const punisherSigBlock = `
-    <div style="margin-bottom:10px;">
-      <div style="border-bottom:1px solid #888; display:inline-block; width:250px; min-height:40px; vertical-align:bottom; position:relative;">
-        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:10px;">ລົງຊື່</span>
-        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:10px;">ວັນທີ ____/____/______</span>
+    <div style="margin-bottom:8px;">
+      <div style="border-bottom:1px solid #888; display:inline-block; width:200px; min-height:30px; vertical-align:bottom; position:relative;">
+        <span style="position:absolute; bottom:2px; left:0; white-space:nowrap; font-size:9px;">ລົງຊື່</span>
+        <span style="position:absolute; bottom:2px; right:0; white-space:nowrap; font-size:9px;">ວັນທີ ____/____/______</span>
       </div>
-      <div style="font-size:10px; margin-top:4px;">(_________________) ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
+      <div style="font-size:9px; margin-top:3px;">(_________________) ຜູ້ມີອຳນາດຕັກເຕືອນ</div>
     </div>`
 
   const punish5Label = row.step3.punish5
@@ -1555,12 +1675,17 @@ const buildPrintHTML = (row) => {
 
   const titleText = `ໜັງສືໃບເຕືອນ${caseTypeVal ? ` ${caseTypeVal}` : ''}`
 
-  // ✅ ส่วนที่ 5: ใช้ currLabelPrint แทน ບາດ ตายตัว
-  const percentLine = (percentNum > 0 && amountBahtNum > 0)
+  // ✅ ส่วนที่ 5: แสดง % line เฉพาะ baht/dollar mode
+  const percentLine = (!isKipMode && percentNum > 0 && amountBahtNum > 0)
     ? `<div style="margin-bottom:6px;line-height:1.8;">
-         ມູນຄ່າຈຳນວນເງິນ ${amtBahtOrig} ${currLabelPrint} x ຄູນ ${percentNum}% ເທົ່າກັບຈຳນວນເງິນ ${amtAfterPercentDisplay} ${currLabelPrint}
+         ມູນຄ່າຈຳນວນເງິນ ${displayAmountOrig} ${currLabelPrint} x ຄູນ ${percentNum}% ເທົ່າກັບຈຳນວນເງິນ ${amtAfterPercentDisplay} ${currLabelPrint}
        </div>`
     : ''
+
+  // ✅ ส่วน 5 สรุปยอด — kip mode แสดงต่างจาก baht/dollar
+  const s5AmountDisplay = isKipMode
+    ? amtKip   // กีบโดยตรง
+    : amtAfterPercentDisplay
 
   const regulationRowsHTML = regulationList.length
     ? regulationList.map((item, idx) =>
@@ -1633,13 +1758,10 @@ const buildPrintHTML = (row) => {
   .s4-div{background:#999;}
   .s4-right{padding:5px 10px;}
   .s5-body{border:1px solid #999;border-top:none;padding:7px 12px;}
-  /* ✅ badge สกุลเงินในเอกสาร */
-  .currency-badge-print {
-    display:inline-block;padding:0 2px;border-radius:0;font-size:9.5px;font-weight:700;
-    margin-left:4px;border:none;background:transparent;
-  }
-  .currency-badge-baht   { background:transparent;color:#000;border:none; }
-  .currency-badge-dollar { background:transparent;color:#000;border:none; }
+  .currency-badge-print{display:inline-block;padding:0 2px;border-radius:0;font-size:9.5px;font-weight:700;margin-left:4px;border:none;background:transparent;}
+  .currency-badge-baht{background:transparent;color:#000;border:none;}
+  .currency-badge-dollar{background:transparent;color:#000;border:none;}
+  .currency-badge-kip{background:transparent;color:#000;border:none;}
 </style></head><body>
 
 <div class="page"><div class="page-inner">
@@ -1712,17 +1834,22 @@ const buildPrintHTML = (row) => {
       <div style="font-size:9.5px;color:#333;padding-left:4px;">ຈຶ່ງແຈ້ງປະໂຫຍດດ້ວຍຕົນເອງ ແລະ ໃຫ້ທ່ານຮັບຊາບ ແລະ ຄຳນຶງດ້ວຍຕົວທ່ານເອງ</div>
     </div>
     <div class="s2-right">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px; flex-wrap:wrap;">
         <span class="chk-lg">${neverPunish ? '✓' : ''}</span><span>ບໍ່ເຄີຍ</span>&nbsp;
         <span class="chk-lg">${hasPunish ? '✓' : ''}</span><span>ເຄີຍຖຶກໂທດທາງວິໄນ</span>
       </div>
+      ${historyDetail ? `
+      <div style="margin-top:8px; padding:6px 8px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; font-size:10px;">
+        <strong>ລາຍລະອຽດ:</strong> ${historyDetail}
+      </div>
+      ` : ''}
       <hr class="hr-thin">
-      <div style="font-size:10px;margin-top:4px;">
-        <div style="display:flex;align-items:flex-end;gap:6px;line-height:1;">
-          <span style="white-space:nowrap;line-height:1;min-width:70px;">ລົງຊື່ :</span>
+      <div style="font-size:9px;margin-top:3px;">
+        <div style="display:flex; align-items:flex-end; gap:5px; line-height:1;">
+          <span style="white-space:nowrap; line-height:1; min-width:60px;">ລົງຊື່:</span>
           ${hrSigBox}
         </div>
-        <div style="margin-top:2px;margin-left:calc(70px + 6px);width:150px;text-align:center;font-size:9.5px;line-height:1.15;word-break:break-word;">
+        <div style="margin-top:2px; margin-left:calc(60px + 5px); width:120px; text-align:center; font-size:8.5px; line-height:1.1; word-break:break-word;">
           (${hrName || '____________________'})
         </div>
       </div>
@@ -1757,22 +1884,22 @@ const buildPrintHTML = (row) => {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
       <div style="margin-bottom:6px;">${punisherSigBlock}</div>
-      <div style="margin-bottom:6px;">
-        <div style="display:flex;align-items:flex-end;gap:3px;">
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;align-items:flex-end;gap:2px;">
           <span style="white-space:nowrap;line-height:1;">ລົງຊື່</span>
-          <span style="border-bottom:1px solid #888;display:inline-flex;align-items:center;justify-content:center;width:90px;min-height:48px;flex-shrink:0;"></span>
-          <span style="white-space:nowrap;font-size:9.5px;line-height:1;">ວັນທີ ____/____/______</span>
+          <span style="border-bottom:1px solid #888;display:inline-flex;align-items:center;justify-content:center;width:70px;min-height:35px;flex-shrink:0;"></span>
+          <span style="white-space:nowrap;font-size:9px;line-height:1;">ວັນທີ ____/____/______</span>
         </div>
-        <div style="font-size:10px;margin-top:2px;">(${empName}) ພະນັກງານ (ຜູ້ຖືກລົງໂທດ)</div>
+        <div style="font-size:9px;margin-top:2px;">(${empName}) ພະນັກງານ (ຜູ້ຖືກລົງໂທດ)</div>
       </div>
-      <div style="margin-bottom:6px;">${docSigBlock(witness1Name, witness1Detail)}</div>
-      <div style="margin-bottom:6px;">
-        <div style="display:flex;align-items:flex-end;gap:3px;">
-          <span style="white-space:nowrap;line-height:1;min-width:28px;display:inline-block;">ລົງຊື່</span>
+      <div style="margin-bottom:4px;">${docSigBlock(witness1Name, witness1Detail)}</div>
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;align-items:flex-end;gap:2px;">
+          <span style="white-space:nowrap;line-height:1;min-width:25px;display:inline-block;">ລົງຊື່</span>
           ${hrSigBox}
-          <span style="white-space:nowrap;font-size:9.5px;line-height:1;">ວັນທີ ____/____/______</span>
+          <span style="white-space:nowrap;font-size:9px;line-height:1;">ວັນທີ ____/____/______</span>
         </div>
-        <div style="margin-top:2px;margin-left:calc(28px + 3px);width:150px;text-align:center;font-size:10px;line-height:1.15;word-break:break-word;">
+        <div style="margin-top:2px;margin-left:calc(25px + 2px);width:120px;text-align:center;font-size:9px;line-height:1.1;word-break:break-word;">
           <div>(${hrName || '____________________'})</div>
           <div>${hrResponsib}</div>
         </div>
@@ -1847,7 +1974,7 @@ const buildPrintHTML = (row) => {
     </div>
   </div>
 
-  <!-- ✅ ส่วนที่ 5 — ใช้ currLabelPrint แทน ບາດ ตายตัว -->
+  <!-- ✅ ส่วนที่ 5 — รองรับ kip mode -->
   <div class="section-bar">ສ່ວນທີ 5 ຍິນຍອມຊົດໃຊ້ຄ່າເສຍຫາຍ (ກໍລະນີຊັບສິນຂອງບໍລິສັດເສຍຫາຍ)</div>
   <div class="s5-body">
     <div style="display:flex;justify-content:flex-end;gap:20px;margin-bottom:5px;">
@@ -1868,11 +1995,11 @@ const buildPrintHTML = (row) => {
     ${percentLine}
     <div style="margin-bottom:4px;line-height:1.8;">
       ມູນຄ່າຊັບສິນທີ່ເສຍຫາຍເບື້ອງຕົ້ນ ຄ່າ <span style="color:#000;">${caseTypeVal || 'Excess'}</span>
-      <!-- ✅ แสดงจำนวนเงินพร้อมสกุลเงินที่เลือก -->
-      <span style="border-bottom:1px solid #888;display:inline-block;min-width:100px;font-weight:700;">&nbsp;${amtAfterPercentDisplay}&nbsp;</span>
-      <span class="currency-badge-print ${currType === 'dollar' ? 'currency-badge-dollar' : 'currency-badge-baht'}">${currLabelPrint} ${currSymbol}</span>
-      ຄິດໄລ່ເປັນເງິນກີບ
-      ${amtKip ? `(<span style="border-bottom:1px solid #888;display:inline-block;min-width:90px;font-weight:700;">&nbsp;${amtKip} ກີບ&nbsp;</span>)` : `(<span style="border-bottom:1px solid #888;display:inline-block;min-width:90px;">&nbsp;&nbsp;</span>)`}
+      <!-- ✅ แสดงจำนวนเงินพร้อมสกุลเงิน -->
+      <span style="border-bottom:1px solid #888;display:inline-block;min-width:100px;font-weight:700;">&nbsp;${s5AmountDisplay}&nbsp;</span>
+      <span class="currency-badge-print currency-badge-${currType}">${currLabelPrint} ${currSymbol}</span>
+      ${isKipMode ? '' : `ຄິດໄລ່ເປັນເງິນກີບ
+      ${amtKip ? `(<span style="border-bottom:1px solid #888;display:inline-block;min-width:90px;font-weight:700;">&nbsp;${amtKip} ກີບ&nbsp;</span>)` : `(<span style="border-bottom:1px solid #888;display:inline-block;min-width:90px;">&nbsp;&nbsp;</span>)`}`}
     </div>
     <div style="margin-bottom:4px;line-height:1.8;">
       <strong>5.2)</strong> ຂ້າພະເຈົ້າຍິນຍອມໃຫ້ບໍລິສັດຕັດເງິນຕາມຂໍ້ 5.1) ຈຳນວນ
@@ -1957,7 +2084,7 @@ const buildPrintHTML = (row) => {
 
 /* ✅ Currency Select Bar */
 .page-discipline .currency-select-bar {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   margin-bottom: 14px; padding: 10px 14px;
   background: #fff; border: 1.5px solid var(--primary-border);
   border-radius: 10px;
@@ -1989,6 +2116,10 @@ const buildPrintHTML = (row) => {
 .page-discipline .currency-badge-selected.dollar {
   background: #d1fae5; color: #15803d; border: 1px solid #6ee7b7;
 }
+/* ✅ กีบ badge */
+.page-discipline .currency-badge-selected.kip {
+  background: #fef9c3; color: #854d0e; border: 1px solid #fde047;
+}
 
 /* ✅ Preview currency badge */
 .page-discipline .currency-preview-baht {
@@ -1999,6 +2130,12 @@ const buildPrintHTML = (row) => {
 .page-discipline .currency-preview-dollar {
   display: inline-block; background: #d1fae5; color: #15803d;
   border: 1px solid #6ee7b7; border-radius: 6px; padding: 1px 10px;
+  font-size: 12px; font-weight: 700; margin-left: 6px;
+}
+/* ✅ กีบ preview badge */
+.page-discipline .currency-preview-kip {
+  display: inline-block; background: #fef9c3; color: #854d0e;
+  border: 1px solid #fde047; border-radius: 6px; padding: 1px 10px;
   font-size: 12px; font-weight: 700; margin-left: 6px;
 }
 
@@ -2031,10 +2168,10 @@ const buildPrintHTML = (row) => {
 .page-discipline .suggest-code { font-weight:700; color:var(--primary-dark); min-width:90px; font-size:12px; background:#e0f2fe; padding:2px 7px; border-radius:5px; }
 .page-discipline .suggest-name { flex:1; font-weight:600; color:#1e293b; }
 .page-discipline .suggest-dept { font-size:11px; color:#64748b; white-space:nowrap; }
-.page-discipline .sig-preview-box { margin-top:8px; padding:10px 14px; background:#f0f9ff; border:1.5px solid var(--primary-border); border-radius:10px; font-size:12px; color:#1e293b; }
-.page-discipline .sig-preview-line { display:flex; align-items:center; gap:6px; font-weight:600; color:#374151; margin-bottom:4px; }
-.page-discipline .sig-preview-blank { display:inline-block; width:110px; border-bottom:1.5px solid #64748b; min-height:18px; }
-.page-discipline .sig-preview-label { font-size:11px; color:var(--primary-dark); font-weight:600; padding-left:2px; }
+.page-discipline .sig-preview-box { margin-top:6px; padding:6px 10px; background:#f0f9ff; border:1.5px solid var(--primary-border); border-radius:8px; font-size:11px; color:#1e293b; }
+.page-discipline .sig-preview-line { display:flex; align-items:center; gap:4px; font-weight:600; color:#374151; margin-bottom:3px; }
+.page-discipline .sig-preview-blank { display:inline-block; width:80px; border-bottom:1.5px solid #64748b; min-height:15px; }
+.page-discipline .sig-preview-label { font-size:10px; color:var(--primary-dark); font-weight:600; padding-left:2px; }
 .page-discipline .btn { padding:11px 22px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; font-family:'Noto Sans Lao','Noto Sans Thai',sans-serif; transition:all 0.2s; }
 .page-discipline .btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.12); }
 .page-discipline .btn:disabled { opacity:0.65; cursor:not-allowed; transform:none; }
