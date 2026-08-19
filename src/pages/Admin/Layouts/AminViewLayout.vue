@@ -413,10 +413,10 @@ const vClickOutside = {
     <!-- ════ TOPBAR ════ -->
     <header class="topbar">
       <div class="topbar-brand">
-        <img src="/images/Thaidrill.jpeg" alt="ThaiDrill" class="brand-logo" />
+        <img src="/images/logo2.png" alt="ThaiDrill" class="brand-logo" />
         <div class="brand-text">
-          <span class="brand-name">ThaiDrill Lao</span>
-          <span class="brand-sub">ER System</span>
+          <span class="brand-name">ER System</span>
+          <span class="brand-sub">ThaiDrill Lao</span>
         </div>
       </div>
 
@@ -746,10 +746,10 @@ html, body { height: 100%; }
 @media (min-width: 769px) and (max-width: 1024px) { html { zoom: 80%; } }
 
 :root {
-  --accent:       #1976d2;
-  --accent-dark:  #0d47a1;
-  --accent-glow:  rgba(25,118,210,0.30);
-  --accent-glow2: rgba(25,118,210,0.10);
+  --accent:       #e53935;
+  --accent-dark:  #b71c1c;
+  --accent-glow:  rgba(229,57,53,0.30);
+  --accent-glow2: rgba(229,57,53,0.10);
   --tb-bg:        #ffffff;
   --tb-border:    #e8eaed;
   --tb-text:      #374151;
@@ -759,16 +759,16 @@ html, body { height: 100%; }
   --tb-h:         54px;
   --sb-bg:        #ffffff;
   --sb-border:    #e8eaed;
-  --sb-hover:     #f0f7ff;
+  --sb-hover:     #fff1f1;
   --sb-text:      #4b5563;
   --sb-text-sub:  #9ca3af;
   --sb-width:     235px;
   --sb-search-bg: #f9fafb;
   --content-bg:   #f0f3f8;
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.08);
-  --sb-icon:        #1976d2;
+  --sb-icon:        #e53935;
   --sb-icon-active: #ffffff;
-  --sb-icon-hover:  #1976d2;
+  --sb-icon-hover:  #e53935;
 }
 
 body.dark, .app-root.dark {
@@ -786,9 +786,9 @@ body.dark, .app-root.dark {
   --sb-search-bg: #050505;
   --content-bg:   #000000;
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.5);
-  --sb-icon:        #60a5fa;
+  --sb-icon:        #f87171;
   --sb-icon-active: #ffffff;
-  --sb-icon-hover:  #93c5fd;
+  --sb-icon-hover:  #fca5a5;
 }
 
 body { font-family: 'Noto Sans Lao', 'Nunito', 'Barlow', sans-serif; background: var(--content-bg); min-height: 100vh; transition: background 0.3s; }

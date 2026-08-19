@@ -330,10 +330,10 @@ html, body { height: 100%; }
 @media (min-width: 769px) and (max-width: 1024px) { html { zoom: 80%; } }
 
 :root {
-  --accent:       #1976d2;
-  --accent-dark:  #0d47a1;
-  --accent-glow:  rgba(25,118,210,0.30);
-  --accent-glow2: rgba(25,118,210,0.10);
+  --accent:       #e53935;
+  --accent-dark:  #b71c1c;
+  --accent-glow:  rgba(229,57,53,0.30);
+  --accent-glow2: rgba(229,57,53,0.10);
   --tb-bg:        #ffffff;
   --tb-border:    #e8eaed;
   --tb-text:      #374151;
@@ -343,7 +343,7 @@ html, body { height: 100%; }
   --tb-h:         54px;
   --sb-bg:        #ffffff;
   --sb-border:    #e8eaed;
-  --sb-hover:     #f0f7ff;
+  --sb-hover:     #fff1f1;
   --sb-text:      #4b5563;
   --sb-text-sub:  #9ca3af;
   --sb-width:     235px;

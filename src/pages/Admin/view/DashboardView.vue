@@ -161,6 +161,8 @@ const stats = computed(() => {
     frequencyMap[name].total++
   })
 
+  // หมายเหตุ: ตารางเลื่อน (scroll) ได้แล้ว
+  // ถ้าอยากให้แสดงพนักงาน "ทุกคน" ไม่จำกัด 10 คน ให้ลบบรรทัด .slice(0, 10) ออก
   const topRequesters = Object.values(frequencyMap)
     .sort((a, b) => b.total - a.total)
     .slice(0, 10)
@@ -208,7 +210,10 @@ function initCharts() {
           borderColor: '#0ea5e9',
           backgroundColor: 'rgba(14, 165, 233, 0.1)',
           fill: true,
-          tension: 0.4
+          tension: 0.4,
+          borderWidth: 2,          // เส้นบางลงให้เข้ากับดีไซน์ compact
+          pointRadius: 2.5,
+          pointHoverRadius: 4
         },
         {
           label: 'เบิกสวัสดิการ',
@@ -216,7 +221,10 @@ function initCharts() {
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.1)',
           fill: true,
-          tension: 0.4
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 2.5,
+          pointHoverRadius: 4
         }
       ]
     },
@@ -224,10 +232,15 @@ function initCharts() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'top' }
+        // ย่อ legend ให้เล็กลง กินพื้นที่น้อยลง
+        legend: {
+          position: 'top',
+          labels: { boxWidth: 10, boxHeight: 10, padding: 10, font: { size: 11 } }
+        }
       },
       scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } },
+        x: { ticks: { font: { size: 10 } } }
       }
     }
   })
@@ -247,8 +260,12 @@ function initCharts() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      cutout: '62%',   // เจาะรูกลางกว้างขึ้น ดูโปร่งไม่ทึบ
       plugins: {
-        legend: { position: 'bottom' }
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 10, boxHeight: 10, padding: 10, font: { size: 11 } }
+        }
       }
     }
   })
@@ -378,6 +395,10 @@ watch(() => [assetStore.requests, welfareStore.requests, selectedFilter.value, c
       <div class="table-card">
         <div class="table-header">
           <h3><i class="fas fa-users"></i> สรุปจำนวนการเบิกแยกตามพนักงาน</h3>
+          <span class="table-hint" v-if="stats.topRequesters.length > 5">
+            <i class="fas fa-arrows-up-down"></i>
+            ทั้งหมด {{ stats.topRequesters.length }} คน (เลื่อนดูเพิ่มเติม)
+          </span>
         </div>
         <div class="table-body">
           <table v-if="stats.topRequesters.length > 0">
@@ -487,65 +508,73 @@ watch(() => [assetStore.requests, welfareStore.requests, selectedFilter.value, c
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@100..900&display=swap');
 
+/* ═══════════════════════════════════════════════════════════
+   ปรับขนาดรวมของ Dashboard ได้จากตัวแปรชุดนี้จุดเดียว
+   อยากให้เล็กลงอีก → ลดค่า --card-pad / --gap / --radius
+   ═══════════════════════════════════════════════════════════ */
 .dashboard-container {
-  padding: 24px;
+  --card-pad: 14px;   /* เดิม 20px */
+  --gap: 14px;        /* เดิม 20px */
+  --radius: 12px;     /* เดิม 16px */
+
+  padding: 16px;      /* เดิม 24px */
   background: #f1f5f9;
   min-height: 100vh;
   font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
 }
 
-/* Header */
+/* ── Header ── */
 .header-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--gap);
 }
 .header-content h1 {
-  font-size: 24px;
+  font-size: 18px;      /* เดิม 24px */
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .header-content p {
   color: #64748b;
-  font-size: 14px;
+  font-size: 12px;      /* เดิม 14px */
 }
 .header-actions {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 12px;
+  gap: 8px;
 }
 
-/* Date Filters Style */
+/* ── Date Filters ── */
 .filter-wrapper {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 .filter-group {
   display: flex;
   background: white;
-  padding: 4px;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  padding: 3px;
+  border-radius: 9px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   border: 1px solid #e2e8f0;
 }
 .filter-btn {
-  padding: 6px 16px;
+  padding: 5px 11px;    /* เดิม 6px 16px */
   border: none;
   background: none;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: 6px;
+  font-size: 12px;      /* เดิม 13px */
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 .filter-btn:hover {
   color: #1e293b;
@@ -559,18 +588,18 @@ watch(() => [assetStore.requests, welfareStore.requests, selectedFilter.value, c
 .custom-date-inputs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: white;
-  padding: 6px 12px;
-  border-radius: 10px;
+  padding: 5px 10px;
+  border-radius: 8px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 .date-input {
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 3px 7px;
+  font-size: 11.5px;
   color: #1e293b;
   outline: none;
 }
@@ -579,67 +608,71 @@ watch(() => [assetStore.requests, welfareStore.requests, selectedFilter.value, c
   box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1);
 }
 .date-sep {
-  font-size: 12px;
+  font-size: 11.5px;
   color: #64748b;
 }
 
 .btn-refresh {
-  padding: 10px 18px;
+  padding: 7px 14px;    /* เดิม 10px 18px */
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   color: #1e293b;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .btn-refresh:hover:not(:disabled) {
   background: #f8fafc;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-/* KPI Cards */
+/* ── KPI Cards ── */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 24px;
+  gap: var(--gap);
+  margin-bottom: var(--gap);
 }
 .kpi-card {
   background: white;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  padding: var(--card-pad);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05);
   display: flex;
   align-items: center;
-  gap: 16px;
-  border-left: 5px solid #cbd5e1;
+  gap: 11px;            /* เดิม 16px */
+  border-left: 4px solid #cbd5e1;
 }
 .kpi-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 36px;          /* เดิม 48px */
+  height: 36px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 15px;      /* เดิม 20px */
+  flex-shrink: 0;
 }
 .kpi-info .kpi-label {
-  font-size: 13px;
+  font-size: 11.5px;    /* เดิม 13px */
   color: #64748b;
   font-weight: 600;
+  line-height: 1.3;
 }
 .kpi-info h2 {
-  font-size: 24px;
+  font-size: 19px;      /* เดิม 24px */
   font-weight: 700;
   color: #1e293b;
-  margin: 2px 0;
+  margin: 1px 0;
+  line-height: 1.2;
 }
 .kpi-info .kpi-sub {
-  font-size: 12px;
+  font-size: 10.5px;    /* เดิม 12px */
   color: #94a3b8;
 }
 
@@ -652,48 +685,95 @@ watch(() => [assetStore.requests, welfareStore.requests, selectedFilter.value, c
 .welfare-total { border-left-color: #f59e0b; }
 .welfare-total .kpi-icon { background: #fef3c7; color: #f59e0b; }
 
-/* Charts */
+/* ── Charts ── */
 .charts-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 20px;
-  margin-bottom: 24px;
+  gap: var(--gap);
+  margin-bottom: var(--gap);
 }
 .chart-card {
   background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  border-radius: var(--radius);
+  padding: var(--card-pad);
+  box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05);
 }
 .chart-header h3 {
-  font-size: 16px;
+  font-size: 13.5px;    /* เดิม 16px */
   font-weight: 700;
   color: #334155;
-  margin-bottom: 16px;
+  margin-bottom: 10px;  /* เดิม 16px */
 }
 .chart-body {
-  height: 300px;
+  height: 215px;        /* เดิม 300px */
   position: relative;
 }
 
-/* Details Grid */
+/* ── Details Grid ── */
 .details-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 20px;
+  gap: var(--gap);
+  align-items: start;   /* ไม่ให้การ์ดยืดสูงตามกัน */
 }
 .table-card, .summary-card {
   background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  border-radius: var(--radius);
+  padding: var(--card-pad);
+  box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05);
 }
 .table-header h3, .summary-header h3 {
-  font-size: 16px;
+  font-size: 13.5px;    /* เดิม 16px */
   font-weight: 700;
   color: #334155;
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
+.summary-header h3 { margin-bottom: 6px; }
+
+/* ตาราง "สรุปจำนวนการเบิกแยกตามพนักงาน" — 5 แถวแล้วเลื่อน */
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.table-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.table-body {
+  margin-top: 10px;
+  /* ความสูง = หัวตาราง (~31px) + แถวละ ~36px × 5 แถว
+     ปรับจำนวนแถวที่แสดงได้จากบรรทัดนี้บรรทัดเดียว */
+  max-height: 211px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f8fafc;
+}
+
+/* ตรึงหัวตารางตอนเลื่อน (เฉพาะตารางในการ์ดนี้ ไม่กระทบ modal) */
+.table-card .table-body thead th {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 2;
+  /* ใช้ inset shadow แทน border เพราะ border จะหลุดตอน sticky */
+  box-shadow: inset 0 -1px 0 #f1f5f9;
+}
+
+.table-body::-webkit-scrollbar { width: 5px; }
+.table-body::-webkit-scrollbar-track { background: #f8fafc; border-radius: 3px; }
+.table-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.table-body::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 table {
   width: 100%;
@@ -701,39 +781,42 @@ table {
 }
 th {
   text-align: left;
-  font-size: 13px;
+  font-size: 11.5px;    /* เดิม 13px */
   color: #64748b;
-  padding: 12px;
+  padding: 8px 9px;     /* เดิม 12px */
   border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
 }
 td {
-  padding: 12px;
-  font-size: 14px;
+  padding: 7px 9px;     /* เดิม 12px */
+  font-size: 12.5px;    /* เดิม 14px */
   color: #1e293b;
   border-bottom: 1px solid #f1f5f9;
 }
+.table-card tbody tr:hover { background: #f8fafc; }
 .text-center { text-align: center; }
 .requester-name { font-weight: 600; }
 
 .badge-asset, .badge-welfare {
-  padding: 4px 10px;
+  padding: 2px 8px;     /* เดิม 4px 10px */
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;      /* เดิม 12px */
   font-weight: 700;
 }
 .badge-asset { background: #e0f2fe; color: #0369a1; }
 .badge-welfare { background: #dcfce7; color: #15803d; }
 
 .btn-view-detail {
-  padding: 6px 12px;
+  padding: 4px 9px;     /* เดิม 6px 12px */
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 11px;      /* เดิม 12px */
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 .btn-view-detail:hover {
   background: #0ea5e9;
@@ -741,7 +824,48 @@ td {
   border-color: #0ea5e9;
 }
 
-/* Modal Styles */
+/* ── Summary Card (KPI ด้านขวา) ── */
+.kpi-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;       /* เดิม 14px */
+  border-bottom: 1px dashed #e2e8f0;
+}
+.kpi-item:last-child { border-bottom: none; }
+.kpi-item-label { color: #64748b; font-size: 12.5px; }   /* เดิม 14px */
+.kpi-item-value { font-weight: 700; color: #1e293b; font-size: 14px; }  /* เดิม 16px */
+.text-green { color: #10b981; }
+
+.system-status {
+  margin-top: 12px;     /* เดิม 20px */
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  background: #f0fdf4;
+  border-radius: 8px;
+  color: #15803d;
+  font-size: 11px;      /* เดิม 12px */
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+  flex-shrink: 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px;        /* เดิม 40px */
+  color: #94a3b8;
+  font-size: 12.5px;
+  font-style: italic;
+}
+
+/* ── Modal ── */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -751,50 +875,54 @@ td {
   justify-content: center;
   z-index: 2000;
   backdrop-filter: blur(4px);
-  padding: 20px;
+  padding: 16px;
 }
 .modal-content {
   background: white;
   width: 100%;
-  max-width: 900px;
+  max-width: 860px;
   max-height: 85vh;
-  border-radius: 20px;
+  border-radius: 14px;  /* เดิม 20px */
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25);
 }
 .modal-header {
-  padding: 20px 24px;
+  padding: 14px 18px;   /* เดิม 20px 24px */
   border-bottom: 1px solid #f1f5f9;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.modal-header h3 { font-size: 18px; font-weight: 700; color: #1e293b; margin: 0; }
+.modal-header h3 { font-size: 15px; font-weight: 700; color: #1e293b; margin: 0; }
 .btn-close {
-  background: none; border: none; font-size: 28px; color: #94a3b8; cursor: pointer;
+  background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer;
+  line-height: 1;
 }
 .modal-body {
-  padding: 24px;
+  padding: 16px 18px;   /* เดิม 24px */
   overflow-y: auto;
 }
 .history-img-wrap {
-  width: 50px; height: 50px; border-radius: 8px; overflow: hidden; background: #f1f5f9;
+  width: 40px; height: 40px;   /* เดิม 50px */
+  border-radius: 7px; overflow: hidden; background: #f1f5f9;
 }
 .history-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
 .badge-type {
-  padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  padding: 3px 7px; border-radius: 6px; font-size: 10.5px; font-weight: 600;
+  white-space: nowrap;
 }
 .badge-type.asset { background: #e0f2fe; color: #0369a1; }
 .badge-type.welfare { background: #dcfce7; color: #15803d; }
 
 .badge-category {
-  padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
-  text-transform: uppercase;
+  padding: 3px 7px; border-radius: 6px; font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; white-space: nowrap;
 }
 .badge-category.asset { border: 1px solid #0ea5e9; color: #0ea5e9; }
 .badge-category.welfare { border: 1px solid #10b981; color: #10b981; }
+.text-muted { color: #94a3b8; font-size: 11px; }
 
 .animate-in {
   animation: modalFadeIn 0.3s ease-out;
@@ -804,59 +932,25 @@ td {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.frequency-bar-wrap {
-  width: 100%;
-  height: 8px;
-  background: #f1f5f9;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.frequency-bar {
-  height: 100%;
-  background: #0ea5e9;
-  border-radius: 4px;
-}
-
-.kpi-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px dashed #e2e8f0;
-}
-.kpi-item:last-child { border-bottom: none; }
-.kpi-item-label { color: #64748b; font-size: 14px; }
-.kpi-item-value { font-weight: 700; color: #1e293b; font-size: 16px; }
-.text-green { color: #10b981; }
-
-.system-status {
-  margin-top: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px;
-  background: #f0fdf4;
-  border-radius: 8px;
-  color: #15803d;
-  font-size: 12px;
-}
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background: #22c55e;
-  border-radius: 50%;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px;
-  color: #94a3b8;
-  font-style: italic;
-}
-
+/* ── Responsive ── */
 @media (max-width: 1200px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .charts-grid, .details-grid { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 768px) {
+  .dashboard-container { padding: 12px; --gap: 10px; --card-pad: 12px; }
+  .header-section { flex-direction: column; align-items: stretch; gap: 10px; }
+  .header-actions { align-items: stretch; }
+  .filter-wrapper { align-items: stretch; }
+  .filter-group { flex-wrap: wrap; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .chart-body { height: 180px; }
+  .table-body { overflow-x: auto; }
+  .table-body table { min-width: 580px; }
+  .table-hint { display: none; }
+}
 </style>
+
+
+

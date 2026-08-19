@@ -48,6 +48,17 @@ const openSubmenus = ref({})
 function toggleSubmenu(name) { openSubmenus.value[name] = !openSubmenus.value[name] }
 function isSubmenuOpen(name) { return !!openSubmenus.value[name] }
 function isChildActive(item) { return item.children?.some(c => route.path === c.path) }
+function activeNavStyle(isActive) {
+  return isActive ? {
+    background: '#ffffff',
+    color: '#111827',
+    borderColor: '#e5e7eb',
+    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
+  } : null
+}
+function activeNavIconStyle(isActive) {
+  return isActive ? { color: '#111827' } : null
+}
 
 // ── Dark mode ──────────────────────────────────────────────
 const isDark = ref(false)
@@ -404,10 +415,10 @@ const vClickOutside = {
     <!-- ════ TOPBAR ════ -->
     <header class="topbar">
       <div class="topbar-brand">
-        <img src="/images/Thaidrill.jpeg" alt="ThaiDrill" class="brand-logo" />
+        <img src="/images/logo1.png" alt="ErSystem" class="brand-logo" />
         <div class="brand-text">
-          <span class="brand-name">ThaiDrill Lao</span>
-          <span class="brand-sub">ER System</span>
+          <span class="brand-name">ER System</span>
+          <span class="brand-sub">THaiDrill Lao</span>
         </div>
       </div>
 
@@ -486,7 +497,7 @@ const vClickOutside = {
               <div class="tb-dropdown" v-if="profileOpen">
                 <div class="tb-dropdown-header">
                   <div class="tb-avatar-container">
-                    <img src="/images/Thaidrill.jpeg" alt="Avatar" class="tb-avatar-img" />
+                    <img src="/images/logo.png" alt="ErSystem" class="tb-avatar-img" />
                   </div>
                   <div class="tb-profile-details">
                     <div class="tb-dd-name">{{ auth.session?.fullname || 'Admin User' }}</div>
@@ -549,25 +560,29 @@ const vClickOutside = {
           <template v-for="item in menuItems" :key="item.path || item.name">
             <template v-if="item.children">
               <a class="nav-item nav-parent" :class="{ 'has-active': isChildActive(item) }"
+                :style="activeNavStyle(isChildActive(item))"
                 href="#" @click.prevent="toggleSubmenu(item.name)">
-                <i :class="['fa', item.icon]"></i>
+                <i :class="['fa', item.icon]" :style="activeNavIconStyle(isChildActive(item))"></i>
                 <span class="nav-label">{{ item.name }}</span>
-                <i class="fa fa-chevron-right nav-arrow" :class="{ rotated: isSubmenuOpen(item.name) }"></i>
+                <i class="fa fa-chevron-right nav-arrow" :class="{ rotated: isSubmenuOpen(item.name) }"
+                  :style="activeNavIconStyle(isChildActive(item))"></i>
               </a>
               <transition name="submenu">
                 <div class="submenu-wrap" v-if="isSubmenuOpen(item.name)">
                   <a v-for="child in item.children" :key="child.path"
                     class="nav-item nav-child" :class="{ active: route.path === child.path }"
+                    :style="activeNavStyle(route.path === child.path)"
                     href="#" @click.prevent="navigate(child.path)">
-                    <i :class="['fa', child.icon]"></i>
+                    <i :class="['fa', child.icon]" :style="activeNavIconStyle(route.path === child.path)"></i>
                     <span class="nav-label">{{ child.name }}</span>
                   </a>
                 </div>
               </transition>
             </template>
             <a v-else class="nav-item" :class="{ active: route.path === item.path }"
+              :style="activeNavStyle(route.path === item.path)"
               href="#" @click.prevent="navigate(item.path)">
-              <i :class="['fa', item.icon]"></i>
+              <i :class="['fa', item.icon]" :style="activeNavIconStyle(route.path === item.path)"></i>
               <span class="nav-label">{{ item.name }}</span>
             </a>
           </template>
@@ -735,12 +750,11 @@ html, body { height: 100%; }
 
 @media (min-width: 769px) { html { zoom: 90%; } body { min-height: 111.11vh; } }
 @media (min-width: 769px) and (max-width: 1024px) { html { zoom: 80%; } }
-
 :root {
-  --accent:       #1976d2;
-  --accent-dark:  #0d47a1;
-  --accent-glow:  rgba(25,118,210,0.30);
-  --accent-glow2: rgba(25,118,210,0.10);
+  --accent:       #e53935;
+  --accent-dark:  #b71c1c;
+  --accent-glow:  rgba(229,57,53,0.30);
+  --accent-glow2: rgba(229,57,53,0.10);
   --tb-bg:        #ffffff;
   --tb-border:    #e8eaed;
   --tb-text:      #374151;
@@ -750,16 +764,21 @@ html, body { height: 100%; }
   --tb-h:         54px;
   --sb-bg:        #ffffff;
   --sb-border:    #e8eaed;
-  --sb-hover:     #f0f7ff;
+  --sb-hover:     #fff1f1;
   --sb-text:      #4b5563;
   --sb-text-sub:  #9ca3af;
   --sb-width:     235px;
   --sb-search-bg: #f9fafb;
   --content-bg:   #f0f3f8;
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.08);
-  --sb-icon:        #1976d2;
+
+  /* ── สีไอคอน Sidebar (โหมดสว่าง) ──
+     แก้จากสีแดง #e53935 เป็นสีดำ
+     ใช้ #111827 (near-black) เพราะอ่านสบายตากว่าดำล้วน
+     และตรงกับสีไอคอนตอน active ที่กำหนดไว้ด้านล่าง */
+  --sb-icon:        #111827;
   --sb-icon-active: #ffffff;
-  --sb-icon-hover:  #1976d2;
+  --sb-icon-hover:  #000000;
 }
 
 body.dark, .app-root.dark {
@@ -777,9 +796,13 @@ body.dark, .app-root.dark {
   --sb-search-bg: #050505;
   --content-bg:   #000000;
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.5);
-  --sb-icon:        #60a5fa;
+
+  /* ── สีไอคอน Sidebar (โหมดมืด) ──
+     ห้ามใช้สีดำในโหมดนี้ เพราะพื้นหลัง sidebar เป็น #000000
+     ไอคอนจะกลืนหายไปกับพื้น จึงใช้สีเทาอ่อน/ขาวแทน */
+  --sb-icon:        #e5e7eb;
   --sb-icon-active: #ffffff;
-  --sb-icon-hover:  #93c5fd;
+  --sb-icon-hover:  #ffffff;
 }
 
 body { font-family: 'Noto Sans Lao', 'Nunito', 'Barlow', sans-serif; background: var(--content-bg); min-height: 100vh; transition: background 0.3s; }
@@ -788,7 +811,7 @@ body { font-family: 'Noto Sans Lao', 'Nunito', 'Barlow', sans-serif; background:
 /* ── TOPBAR ── */
 .topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--tb-h); background: var(--tb-bg); border-bottom: 1px solid var(--tb-border); display: flex; align-items: center; z-index: 200; box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s; }
 .topbar-brand { width: var(--sb-width); min-width: var(--sb-width); display: flex; align-items: center; gap: 11px; padding: 0 18px; height: 100%; border-right: 1px solid var(--tb-border); flex-shrink: 0; overflow: hidden; transition: width 0.28s, min-width 0.28s, border-color 0.3s; }
-.brand-logo { width: 36px; height: 36px; flex-shrink: 0; object-fit: contain; display: block; }
+.brand-logo { width: auto; height: 36px; max-width: 110px; flex-shrink: 0; object-fit: contain; display: block; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.2; }
 .brand-name { font-size: 13.5px; font-weight: 800; color: #e53935; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; transition: opacity 0.2s, color 0.3s; }
 .brand-sub  { font-size: 10px; font-weight: 600; color: var(--accent); letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap; transition: opacity 0.2s, color 0.3s; }
@@ -806,7 +829,8 @@ body { font-family: 'Noto Sans Lao', 'Nunito', 'Barlow', sans-serif; background:
 .app-root.dark .tb-dark-toggle, .app-root.dark .tb-dark-toggle:hover { background: transparent !important; border-color: transparent !important; }
 .app-root.dark .tb-dark-toggle:hover { background: rgba(255,255,255,0.08) !important; }
 .app-root.dark .tb-dark-toggle i, .app-root.dark .tb-dark-toggle .dark-toggle-icon { color: #FFD700 !important; font-size: 18px !important; }
-.app-root:not(.dark) .tb-dark-toggle i, .app-root:not(.dark) .tb-dark-toggle .dark-toggle-icon { color: #e53935 !important; font-size: 18px !important; }
+/* ── ไอคอนดวงอาทิตย์บน topbar: แก้จาก #e53935 เป็นสีดำ ── */
+.app-root:not(.dark) .tb-dark-toggle i, .app-root:not(.dark) .tb-dark-toggle .dark-toggle-icon { color: #111827 !important; font-size: 18px !important; }
 
 .tb-datetime { display: flex; align-items: center; gap: 9px; padding: 6px 4px; }
 .tb-datetime i { font-size: 13px; color: var(--tb-icon); flex-shrink: 0; }
@@ -891,18 +915,18 @@ body { font-family: 'Noto Sans Lao', 'Nunito', 'Barlow', sans-serif; background:
 .sidebar::-webkit-scrollbar { width: 3px; }
 .sidebar::-webkit-scrollbar-thumb { background: var(--sb-border); border-radius: 3px; }
 nav { flex: 1; padding: 4px 8px; }
-.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 7px; cursor: pointer; transition: all 0.15s ease; color: var(--sb-text); font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; margin-bottom: 2px; text-decoration: none; user-select: none; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 7px; cursor: pointer; transition: all 0.15s ease; color: var(--sb-text); font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; margin-bottom: 2px; text-decoration: none; user-select: none; border: 1px solid transparent; }
 .nav-item i { font-size: 15px; width: 20px; min-width: 20px; text-align: center; flex-shrink: 0; color: var(--sb-icon); transition: color 0.15s; }
 .nav-item:hover { background: var(--sb-hover); color: var(--accent); }
 .nav-item:hover i { color: var(--sb-icon-hover); }
-.nav-item.active { background: var(--accent); color: #fff; box-shadow: 0 3px 14px var(--accent-glow); }
-.nav-item.active i { color: var(--sb-icon-active) !important; }
+.sidebar .nav-item.active { background: #ffffff !important; color: #111827 !important; border-color: #e5e7eb !important; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08) !important; }
+.sidebar .nav-item.active i { color: #111827 !important; }
 .nav-label { flex: 1; }
 .nav-parent .nav-arrow { font-size: 10px; color: var(--sb-text-sub); transition: transform 0.25s, color 0.15s; flex-shrink: 0; }
 .nav-parent .nav-arrow.rotated { transform: rotate(90deg); }
 .nav-parent:hover .nav-arrow { color: var(--accent); }
-.nav-parent.has-active { color: var(--accent); }
-.nav-parent.has-active > i { color: var(--accent) !important; }
+.sidebar .nav-parent.has-active { color: #111827 !important; }
+.sidebar .nav-parent.has-active > i { color: #111827 !important; }
 .submenu-wrap { overflow: hidden; }
 .nav-child { padding: 8px 12px 8px 42px; font-size: 12.5px; }
 .nav-child i { font-size: 13px; }
@@ -946,8 +970,10 @@ nav { flex: 1; padding: 4px 8px; }
 /* ════ DARK MODE ════ */
 .app-root.dark .nav-item i     { color: var(--sb-icon) !important; }
 .app-root.dark .nav-item:hover i { color: var(--sb-icon-hover) !important; }
-.app-root.dark .nav-item.active i { color: var(--sb-icon-active) !important; }
-.app-root.dark .nav-parent.has-active > i { color: var(--accent) !important; }
+.app-root.dark .sidebar .nav-item.active { background: #111827 !important; color: #ffffff !important; border-color: #1f2937 !important; box-shadow: none !important; }
+.app-root.dark .sidebar .nav-item.active i { color: #ffffff !important; }
+.app-root.dark .sidebar .nav-parent.has-active { color: #ffffff !important; }
+.app-root.dark .sidebar .nav-parent.has-active > i { color: #ffffff !important; }
 .app-root.dark { background: #000000 !important; color: #f5f5f5 !important; }
 .app-root.dark body, .app-root.dark * { background-color: inherit !important; color: inherit !important; }
 .app-root.dark .layout,
@@ -1038,12 +1064,6 @@ nav { flex: 1; padding: 4px 8px; }
   justify-content: flex-end;
   z-index: 400;
 }
-.drawer {
-  width: 100%; max-width: 420px; height: 100%;
-  background: var(--tb-bg);
-  border-left: 1px solid var(--tb-border);
-  display: flex; flex-direction: column;
-}
 
 /* ── Custom Profile Dropdown Styles ── */
 .tb-avatar-container {
@@ -1052,13 +1072,14 @@ nav { flex: 1; padding: 4px 8px; }
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid var(--accent);
+  background: #fff;
   margin-bottom: 12px;
   flex-shrink: 0;
 }
 .tb-avatar-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 .tb-profile-details {
   text-align: center;
@@ -1160,6 +1181,7 @@ nav { flex: 1; padding: 4px 8px; }
 
 .flex-1 { flex: 1; }
 
+/* หมายเหตุ: .drawer เดิมประกาศซ้ำ 2 ครั้ง — รวมเหลือชุดเดียวตรงนี้ */
 .drawer {
   width: 100%; max-width: 420px; height: 100%;
   background: var(--tb-bg);
@@ -1286,4 +1308,15 @@ nav { flex: 1; padding: 4px 8px; }
 .app-root.dark .btn-save { background: #1976d2 !important; }
 .app-root.dark .btn-save:hover:not(:disabled) { background: #1565c0 !important; }
 
+/* ══════════════════════════════════════════════════════════
+   (ทางเลือก) ถ้าอยากให้ตอน hover ไม่เหลือโทนแดงเลย
+   ให้ลบเครื่องหมาย comment ออกจาก 2 บรรทัดล่างนี้
+   ══════════════════════════════════════════════════════════ */
+/*
+:root { --sb-hover: #f3f4f6; }
+.app-root:not(.dark) .nav-item:hover { color: #111827; }
+*/
+
 </style>
+
+
